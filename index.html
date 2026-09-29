@@ -1,0 +1,173 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Go Pedal</title>
+<style>
+  :root { --bg:#16161a; --card:#222228; --fg:#eee; --dim:#888; --acc:#ff8a00; --ok:#3ddc84; }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px system-ui,sans-serif; display:flex; justify-content:center }
+  main { width:100%; max-width:520px; padding:16px }
+  h1 { font-size:18px; margin:0 0 12px }
+  .tabs { display:flex; gap:8px; margin-bottom:12px }
+  .tabs button { flex:1; padding:10px; border:0; border-radius:8px; background:var(--card); color:var(--dim); font-size:15px; cursor:pointer }
+  .tabs button.on { background:var(--acc); color:#000; font-weight:600 }
+  .card { background:var(--card); border-radius:12px; padding:14px; margin-bottom:12px }
+  .card h2 { font-size:14px; margin:0 0 8px; display:flex; justify-content:space-between; align-items:center }
+  label { display:flex; align-items:center; gap:10px; margin:6px 0; color:var(--dim) }
+  label span:first-child { width:80px }
+  label output { width:52px; text-align:right; color:var(--fg); font-variant-numeric:tabular-nums }
+  input[type=range] { flex:1; accent-color:var(--acc) }
+  .meter { height:8px; background:#000; border-radius:4px; overflow:hidden }
+  .meter div { height:100%; width:0; background:var(--ok); transition:width .06s }
+  #tuner { display:none; text-align:center }
+  .note { font-size:80px; font-weight:700; line-height:1.1; height:88px }
+  .hz { color:var(--dim); height:20px }
+  .gauge { position:relative; height:50px; margin:18px 8px 6px; border-bottom:2px solid #444 }
+  .gauge .tick { position:absolute; bottom:0; width:2px; height:14px; background:#555 }
+  .gauge .mid { left:50%; height:28px; background:var(--ok) }
+  #needle { position:absolute; bottom:0; left:50%; width:4px; height:46px; margin-left:-2px; background:var(--dim); border-radius:2px; transition:left .08s, background .1s }
+  .cents { font-size:22px; height:30px; margin-top:6px }
+  .strings { display:flex; justify-content:center; gap:6px; margin-top:12px }
+  .strings div { width:44px; padding:8px 0; border-radius:8px; background:#111; color:var(--dim) }
+  .strings div.on { background:var(--acc); color:#000; font-weight:700 }
+  select { background:#111; color:var(--fg); border:1px solid #444; border-radius:6px; padding:4px 8px }
+</style>
+<main>
+  <h1>Go Pedal</h1>
+  <div class="tabs">
+    <button id="tab-pedal">Pedal</button>
+    <button id="tab-tuner">Tuner</button>
+  </div>
+
+  <div class="card"><div class="meter"><div id="level"></div></div></div>
+
+  <div id="pedal">
+    <div class="card">
+      <h2>Output</h2>
+      <label><span>Volume</span><input type="range" data-k="volume" min="0" max="1" step="0.01"><output></output></label>
+    </div>
+    <div class="card">
+      <h2>Noise gate <input type="checkbox" data-k="gateOn"></h2>
+      <label><span>Threshold</span><input type="range" data-k="gate" min="0" max="0.1" step="0.001"><output></output></label>
+    </div>
+    <div class="card">
+      <h2>Fuzz <input type="checkbox" data-k="fuzzOn"></h2>
+      <label><span>Fuzz</span><input type="range" data-k="fuzz" min="1" max="100" step="1"><output></output></label>
+      <label><span>Tone</span><input type="range" data-k="fuzzTone" min="0" max="1" step="0.01"><output></output></label>
+    </div>
+    <div class="card">
+      <h2>Overdrive <input type="checkbox" data-k="driveOn"></h2>
+      <label><span>Drive</span><input type="range" data-k="drive" min="1" max="50" step="0.5"><output></output></label>
+    </div>
+    <div class="card">
+      <h2>Delay <input type="checkbox" data-k="delayOn"></h2>
+      <label><span>Time (ms)</span><input type="range" data-k="delayMs" min="20" max="1000" step="10"><output></output></label>
+      <label><span>Feedback</span><input type="range" data-k="feedback" min="0" max="0.9" step="0.01"><output></output></label>
+      <label><span>Mix</span><input type="range" data-k="mix" min="0" max="1" step="0.01"><output></output></label>
+    </div>
+    <div class="card">
+      <h2>Reverb <input type="checkbox" data-k="revOn"></h2>
+      <label><span>Room size</span><input type="range" data-k="room" min="0" max="1" step="0.01"><output></output></label>
+      <label><span>Damping</span><input type="range" data-k="damp" min="0" max="1" step="0.01"><output></output></label>
+      <label><span>Mix</span><input type="range" data-k="revMix" min="0" max="1" step="0.01"><output></output></label>
+    </div>
+  </div>
+
+  <div id="tuner" class="card">
+    <h2>Guitar tuner
+      <select data-k="tuning">
+        <option value="standard">Standard (EADGBE)</option>
+        <option value="dropd">Drop D</option>
+        <option value="halfstep">Half step down</option>
+      </select>
+    </h2>
+    <div class="note" id="note">–</div>
+    <div class="hz" id="hz">play a string</div>
+    <div class="gauge" id="gauge"><div id="needle"></div></div>
+    <div class="cents" id="cents"></div>
+    <div class="strings" id="strings"></div>
+    <p style="color:var(--dim);font-size:13px">Output is muted while tuning.</p>
+  </div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const post = body => fetch('/api/state', {method:'POST', body:JSON.stringify(body)});
+const TUNINGS = {
+  standard:['E','A','D','G','B','E'], dropd:['D','A','D','G','B','E'],
+  halfstep:['Eb','Ab','Db','Gb','Bb','Eb'],
+};
+
+// gauge ticks
+for (let c = -50; c <= 50; c += 10) {
+  const t = document.createElement('div');
+  t.className = 'tick' + (c === 0 ? ' mid' : '');
+  t.style.left = (50 + c) + '%';
+  $('#gauge').prepend(t);
+}
+
+function setMode(mode) {
+  $('#tab-pedal').classList.toggle('on', mode === 'pedal');
+  $('#tab-tuner').classList.toggle('on', mode === 'tuner');
+  $('#pedal').style.display = mode === 'pedal' ? '' : 'none';
+  $('#tuner').style.display = mode === 'tuner' ? 'block' : 'none';
+}
+$('#tab-pedal').onclick = () => { setMode('pedal'); post({mode:'pedal'}); };
+$('#tab-tuner').onclick = () => { setMode('tuner'); post({mode:'tuner'}); };
+
+function fmt(el, v) {
+  const o = el.parentElement.querySelector('output');
+  if (o) o.textContent = (+v).toFixed(el.step.includes('.') ? (el.step.split('.')[1].length) : 0);
+}
+
+document.querySelectorAll('[data-k]').forEach(el => {
+  el.addEventListener('input', () => {
+    const v = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value;
+    if (el.type === 'range') fmt(el, v);
+    post({[el.dataset.k]: v});
+    if (el.dataset.k === 'tuning') drawStrings(v);
+  });
+});
+
+function drawStrings(tuning) {
+  $('#strings').innerHTML = TUNINGS[tuning].map((n,i) => `<div data-s="${i+1}">${n}</div>`).join('');
+}
+
+function loadParams(p) {
+  document.querySelectorAll('[data-k]').forEach(el => {
+    const v = p[el.dataset.k];
+    if (el.type === 'checkbox') el.checked = v; else el.value = v;
+    if (el.type === 'range') fmt(el, v);
+  });
+  setMode(p.mode);
+  drawStrings(p.tuning);
+}
+
+function showTuner(t) {
+  document.querySelectorAll('#strings div').forEach(d => d.classList.toggle('on', t.active && +d.dataset.s === t.string));
+  const needle = $('#needle');
+  if (!t.active) {
+    $('#note').textContent = '–'; $('#hz').textContent = 'play a string';
+    $('#cents').textContent = ''; needle.style.left = '50%'; needle.style.background = 'var(--dim)';
+    return;
+  }
+  const c = Math.max(-50, Math.min(50, t.cents));
+  const inTune = Math.abs(t.cents) < 5;
+  $('#note').textContent = t.note.replace(/\d/g, '');
+  $('#hz').textContent = t.freq.toFixed(1) + ' Hz  (target ' + t.target.toFixed(1) + ')';
+  needle.style.left = (50 + c) + '%';
+  needle.style.background = inTune ? 'var(--ok)' : 'var(--acc)';
+  $('#cents').textContent = inTune ? 'In tune ✓' : (t.cents < 0 ? '♭ tune up ' : '♯ tune down ') + Math.abs(t.cents).toFixed(0) + '¢';
+  $('#cents').style.color = inTune ? 'var(--ok)' : 'var(--fg)';
+}
+
+async function poll(first) {
+  try {
+    const s = await (await fetch('/api/state')).json();
+    if (first) loadParams(s.params);
+    $('#level').style.width = Math.min(100, s.level * 150) + '%';
+    showTuner(s.tuner);
+  } catch (e) {}
+  setTimeout(() => poll(false), 66);
+}
+poll(true);
+</script>
