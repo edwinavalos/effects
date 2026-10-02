@@ -28,15 +28,17 @@ func serve(e *Engine, addr string) {
 		}
 		e.mu.Lock()
 		state := struct {
-			Params   Params    `json:"params"`
-			Level    float64   `json:"level"`
-			Tuner    Reading   `json:"tuner"`
-			Spectrum []float64 `json:"spectrum"`
+			Params   Params       `json:"params"`
+			Level    float64      `json:"level"`
+			Tuner    Reading      `json:"tuner"`
+			Chord    ChordReading `json:"chord"`
+			Onsets   []Onset      `json:"onsets"`
+			Spectrum []float64    `json:"spectrum"`
 			Source   struct {
 				Want   string `json:"want"`
 				Active string `json:"active"`
 			} `json:"source"`
-		}{Params: e.p, Level: e.level, Tuner: e.tuner}
+		}{Params: e.p, Level: e.level, Tuner: e.tuner, Chord: e.chord, Onsets: append([]Onset(nil), e.onsets...)}
 		state.Source.Want, state.Source.Active = e.want, e.active
 		state.Spectrum = append([]float64(nil), e.spectrum...)
 		e.mu.Unlock()

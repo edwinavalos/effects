@@ -7,6 +7,7 @@
   * { box-sizing:border-box }
   body { margin:0; background:var(--bg); color:var(--fg); font:15px system-ui,sans-serif; display:flex; justify-content:center }
   main { width:100%; max-width:1100px; padding:16px }
+  main.wide { max-width:1700px }
   header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:14px }
   h1 { font-size:18px; margin:0; margin-right:auto }
   .tabs { display:flex; gap:6px }
@@ -102,8 +103,32 @@
   .sctl label { color:var(--dim); font-size:13px; display:flex; align-items:center; gap:6px }
   .sctl button { border:0; border-radius:6px; background:#333; color:var(--fg); padding:6px 12px; cursor:pointer; font:inherit; font-size:13px }
   .sheet { overflow-x:auto; background:#16161b; border-radius:10px; padding:6px 0 }
-  .sheet svg { display:block }
+  .sheet svg { display:block; width:100%; height:auto; margin:0 auto }
   .sheet .cell { cursor:pointer }
+  #chords { display:none }
+  .sctl input { background:#111; color:var(--fg); border:1px solid #444; border-radius:6px; padding:5px 8px; font:inherit }
+  .sheetwrap { position:relative }
+  .tabhit { fill:transparent; cursor:pointer }
+  .tabhit:hover { fill:#ffffff18 }
+  .cname { cursor:pointer }
+  .cname:hover { fill:var(--acc) }
+  .pop { position:absolute; z-index:5; background:#2c2c34; border:1px solid #555; border-radius:10px; padding:10px; box-shadow:0 8px 24px #000a }
+  .pop .pophead { font-size:13px; color:var(--dim); margin-bottom:8px }
+  .popgrid { display:flex; flex-wrap:wrap; gap:8px; max-width:560px }
+  .opt { background:#1b1b21; border:2px solid transparent; border-radius:8px; color:var(--fg); cursor:pointer; padding:6px; font:inherit; font-size:12px; text-align:center }
+  .opt:hover { background:#2a2a33 }
+  .opt.on { border-color:var(--acc) }
+  .rh-good text, .rh-good ellipse { fill:var(--ok) } .rh-good line { stroke:var(--ok) }
+  .rh-ok text, .rh-ok ellipse { fill:#f5c542 } .rh-ok line { stroke:#f5c542 }
+  .rh-poor text, .rh-poor ellipse { fill:var(--acc) } .rh-poor line { stroke:var(--acc) }
+  .rh-miss text, .rh-miss ellipse { fill:#ff6b6b } .rh-miss line { stroke:#ff6b6b }
+  .rh-wrong text, .rh-wrong ellipse { fill:#c77dff } .rh-wrong line { stroke:#c77dff }
+  .countin { font-size:34px; font-weight:700; min-width:60px }
+  .rstats { display:flex; flex-wrap:wrap; gap:6px 22px; margin-top:10px; color:var(--dim) }
+  .rstats b { color:var(--fg); font-variant-numeric:tabular-nums }
+  #rhythm { display:none }
+  .sctl input[type=range] { padding:0; width:130px }
+  .sctl input[type=number] { width:64px }
   .heard { display:flex; flex-wrap:wrap; gap:6px 18px; align-items:baseline; margin-top:12px; min-height:34px }
   .heard b { font-size:26px; min-width:90px }
   .heard .ok { color:var(--ok) } .heard .bad { color:#ff6b6b }
@@ -115,6 +140,8 @@
       <button id="tab-pedal">Pedalboard</button>
       <button id="tab-tuner">Tuner</button>
       <button id="tab-scales">Scales</button>
+      <button id="tab-chords">Chords</button>
+      <button id="tab-rhythm">Rhythm</button>
     </div>
   </header>
 
@@ -171,6 +198,48 @@
     <div class="sheet" id="sheet"></div>
     <div class="heard"><span class="hint">You're playing</span><b id="sc-heard">–</b><span id="sc-msg" class="hint"></span></div>
     <p class="tip" id="sc-tip"></p>
+  </div>
+  <div id="chords" class="card">
+    <h2>Chord practice</h2>
+    <div class="sctl">
+      <label>Key <select id="ch-key"></select></label>
+      <label>Progression <select id="ch-prog"></select></label>
+      <label>Chords <input id="ch-text" size="34" spellcheck="false" placeholder="C G Am F"></label>
+      <label><input type="checkbox" id="ch-listen" checked> Listen</label>
+      <label>Auto-advance <select id="ch-auto"><option value="0">Off</option><option value="2">2 s</option><option value="4">4 s</option><option value="8">8 s</option></select></label>
+      <button id="ch-prev">‹ Prev</button><button id="ch-next">Next ›</button>
+    </div>
+    <div class="sheetwrap"><div class="sheet" id="csheet"></div><div class="pop" id="chpop" hidden></div></div>
+    <div class="heard"><span class="hint">You're playing</span><b id="ch-heard">–</b><span id="ch-msg" class="hint"></span></div>
+    <p class="hint" id="ch-err"></p>
+    <p class="tip">Hover a chord's tab and click it to pick a different fingering; the choice is remembered for this browser session. Click a chord name to jump to it.
+      With Listen on, strum the chord: it turns green and moves on when it hears the right one. If the next chord is the same one, let the strings ring out or mute them first.
+      Shapes assume standard tuning. Your effects stay on while you practise.</p>
+  </div>
+  <div id="rhythm" class="card">
+    <h2>Rhythm practice</h2>
+    <div class="sctl">
+      <label>Practise <select id="r-mode"><option value="strum">Strumming a chord</option><option value="scale">A scale, note by note</option></select></label>
+      <label>Pattern <select id="r-pat"></select></label>
+      <label title="D = down, U = up, . = rest">8 slots <input id="r-text" size="10" maxlength="8" spellcheck="false" style="font-family:monospace;letter-spacing:.1em"></label>
+      <label>Tempo <input type="range" id="r-bpm" min="40" max="160" value="70"> <span id="r-bpmv">70</span> bpm</label>
+    </div>
+    <div class="sctl">
+      <span id="r-strumctl"><label>Chords, one per bar <input id="r-chords" size="16" value="G C D G" spellcheck="false"></label></span>
+      <span id="r-scalectl" style="display:none;gap:10px 14px;align-items:center;flex-wrap:wrap">
+        <label>Key <select id="r-key"></select></label><label>Scale <select id="r-type"></select></label></span>
+      <label><input type="checkbox" id="r-click" checked> Click</label>
+      <label title="If you are always early or late, shift the timing by this many ms">Latency <input type="number" id="r-lat" value="0" step="5" min="-300" max="300"> ms</label>
+      <button id="r-start">Start</button>
+      <button id="r-adj" title="Shift the timing by your average error">Adjust for my timing</button>
+    </div>
+    <div class="sheet" id="rsheet"></div>
+    <div class="heard"><span class="countin" id="r-count"></span><span id="r-msg" class="hint"></span></div>
+    <div class="rstats" id="r-stats"></div>
+    <p class="hint" id="r-err"></p>
+    <p class="tip">Press Start: you get a one-bar count-in, then play along with the click. Green is on the beat (within 40 ms), yellow close, orange off, red missed.
+      In scale mode every hit is the next note of the scale, so you practise the scale while keeping the rhythm; a note in the wrong pitch turns purple.
+      The arrows show the picking or strumming direction, but only timing is judged, not whether you went down or up. Use headphones so the click isn't picked up by your input.</p>
   </div>
 </main>
 <script>
@@ -334,6 +403,8 @@ addEventListener('keydown', e => {
 
 let lastFrame = performance.now();
 function drawViz(now) {
+  requestAnimationFrame(drawViz); // first, so one bad frame can't stop the loop
+  if (!viz.clientWidth) { lastFrame = now; return; } // hidden (other tab): nothing to draw
   const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now; vt += dt;
   const dpr = devicePixelRatio || 1;
   vw = viz.clientWidth; vh = viz.clientHeight;
@@ -354,7 +425,6 @@ function drawViz(now) {
     vizLabel -= dt; vctx.globalAlpha = Math.min(1, vizLabel); vctx.fillStyle = '#fff'; vctx.font = '600 14px system-ui';
     vctx.textAlign = 'center'; vctx.fillText(VIZ[vizIdx].name, vw / 2, 22); vctx.globalAlpha = 1;
   }
-  requestAnimationFrame(drawViz);
 }
 setViz(vizIdx); vizLabel = 0;
 requestAnimationFrame(drawViz);
@@ -513,13 +583,22 @@ function setMode(mode) {
   $('#pedal').style.display = mode === 'pedal' ? '' : 'none';
   $('#tuner').style.display = mode === 'tuner' ? 'block' : 'none';
   $('#scales').style.display = mode === 'scales' ? 'block' : 'none';
+  $('#tab-chords').classList.toggle('on', mode === 'chords');
+  $('#tab-rhythm').classList.toggle('on', mode === 'rhythm');
+  $('#rhythm').style.display = mode === 'rhythm' ? 'block' : 'none';
+  if (mode !== 'rhythm') stopRhythm();
+  $('#chords').style.display = mode === 'chords' ? 'block' : 'none';
+  view = mode;
   scalesOn = mode === 'scales';
+  $('main').classList.toggle('wide', mode === 'scales' || mode === 'chords' || mode === 'rhythm');
 }
-let scalesOn = false;
+let scalesOn = false, view = 'pedal';
 $('#tab-pedal').onclick = () => { setMode('pedal'); post({mode:'pedal'}); };
 $('#tab-tuner').onclick = () => { setMode('tuner'); post({mode:'tuner'}); };
 // The scales tab keeps the server in pedal mode so you hear your effects while practising.
 $('#tab-scales').onclick = () => { setMode('scales'); post({mode:'pedal'}); };
+$('#tab-chords').onclick = () => { setMode('chords'); post({mode:'pedal'}); };
+$('#tab-rhythm').onclick = () => { setMode('rhythm'); post({mode:'pedal'}); prepRhythm(); };
 
 document.querySelectorAll('select[data-k]').forEach(el => {
   el.addEventListener('input', () => { post({[el.dataset.k]: el.value}); drawStrings(el.value); buildScale(); });
@@ -599,6 +678,29 @@ const SCALES = {
   minpent: {name:'Minor pentatonic', steps:[[1,0],[3,3],[4,5],[5,7],[7,10]]},
   blues:   {name:'Blues',            steps:[[1,0],[3,3],[4,5],[5,6],[5,7],[7,10]]},
 };
+
+const SHEET = {X0:78, YB:105, TY:190, TG:12};
+// A note as written: letter index li, accidental, and d, the diatonic step of the
+// written (octave-up) pitch, so E4 on the treble staff's bottom line is d = 30.
+function spell(midi, li) {
+  const acc = ((midi % 12 - NAT_PC[li] + 18) % 12) - 6;
+  const oct = Math.floor((midi - acc) / 12) - 1;
+  return {midi, li, acc, d:li + 7 * (oct + 1)};
+}
+// Staff, tab lines, clef and TAB label for a sheet w units wide.
+function sheetBase(w, staff = true) {
+  const {YB, TY, TG} = SHEET, sy = step => YB - step * 5;
+  let g = '';
+  if (staff) {
+    for (let i = 0; i < 5; i++) g += `<line x1="8" x2="${w-8}" y1="${sy(i*2)}" y2="${sy(i*2)}" stroke="#888"/>`;
+    g += `<line x1="8" x2="8" y1="${sy(8)}" y2="${sy(0)}" stroke="#888"/>`;
+    g += `<text x="14" y="${sy(1.2)}" font-size="62" fill="#ddd" font-family="'Noto Music','Bravura',FreeSerif,serif">\u{1D11E}</text>`;
+  }
+  for (let s = 0; s < 6; s++) g += `<line x1="8" x2="${w-8}" y1="${TY+s*TG}" y2="${TY+s*TG}" stroke="#888"/>`;
+  g += `<line x1="8" x2="8" y1="${TY}" y2="${TY+5*TG}" stroke="#888"/>`;
+  return g + [['T', 1.5], ['A', 3], ['B', 4.5]].map(([c, k]) =>
+    `<text x="30" y="${TY+k*TG}" font-size="20" font-weight="700" fill="#ddd" text-anchor="middle">${c}</text>`).join('');
+}
 const SC = {notes:[], idx:0, hold:0, timer:0};
 function restartScale() { clearTimeout(SC.timer); SC.idx = 0; SC.hold = 0; drawSheet(); }
 
@@ -623,29 +725,24 @@ function assignTab(notes, open) {
   for (let i = notes.length - 1; i >= 0; i--, node = node.from) Object.assign(notes[i], node.c);
 }
 
-function buildScale() {
-  const tuning = (P && P.tuning) || 'standard';
-  const open = OPEN_MIDI[tuning];
-  const m = /^([A-G])([#b]?)$/.exec($('#sc-root').value);
-  const rl = LETTERS.indexOf(m[1]);
-  const rootPc = (NAT_PC[rl] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) + 12) % 12;
+// The notes of a scale with a string and fret for each, in the tuner's current tuning.
+function makeScale(rootName, type, octs, updown) {
+  const tuning = (P && P.tuning) || 'standard', open = OPEN_MIDI[tuning], root = parseRoot(rootName);
   let rootMidi = open[0];
-  while (rootMidi % 12 !== rootPc) rootMidi++;
-
-  const octs = +$('#sc-oct').value;
-  const mk = (deg, semis) => {
-    const li = (rl + deg - 1) % 7, midi = rootMidi + semis;
-    const acc = ((midi % 12 - NAT_PC[li] + 18) % 12) - 6;
-    const oct = Math.floor((midi - acc) / 12) - 1;
-    return {midi, li, acc, d:li + 7 * (oct + 1)}; // d: diatonic step of the written (octave-up) pitch
-  };
+  while (rootMidi % 12 !== root.pc) rootMidi++;
+  const mk = (deg, semis) => spell(rootMidi + semis, (root.rl + deg - 1) % 7);
   let notes = [];
-  for (let o = 0; o < octs; o++) for (const [deg, semis] of SCALES[$('#sc-type').value].steps) notes.push(mk(deg, semis + 12 * o));
+  for (let o = 0; o < octs; o++) for (const [deg, semis] of SCALES[type].steps) notes.push(mk(deg, semis + 12 * o));
   notes.push(mk(1, 12 * octs));
   notes = notes.filter(n => n.midi <= MAX_MIDI);
-  if ($('#sc-dir').value === 'updown') notes = notes.concat(notes.slice(0, -1).reverse().map(n => ({...n})));
+  if (updown) notes = notes.concat(notes.slice(0, -1).reverse().map(n => ({...n})));
   assignTab(notes, open);
-  SC.notes = notes;
+  return notes;
+}
+
+function buildScale() {
+  const tuning = (P && P.tuning) || 'standard';
+  SC.notes = makeScale($('#sc-root').value, $('#sc-type').value, +$('#sc-oct').value, $('#sc-dir').value === 'updown');
   clearTimeout(SC.timer); SC.idx = 0; SC.hold = 0;
   $('#sc-tip').textContent = 'Tab uses the ' + {standard:'standard', dropd:'Drop D', halfstep:'half-step-down'}[tuning] +
     ' tuning (set it on the Tuner tab). Notes above B4 are left out because the pitch detector stops there. Your effects stay on while you practise.';
@@ -653,17 +750,10 @@ function buildScale() {
 }
 
 function drawSheet() {
-  const X0 = 78, W = 40, YB = 105, TY = 190, TG = 12, notes = SC.notes;
+  const {X0, YB, TY, TG} = SHEET, W = 40, notes = SC.notes;
   const w = X0 + notes.length * W + 10, H = TY + 5 * TG + 24;
   const sy = step => YB - step * 5;
-  let g = '';
-  for (let i = 0; i < 5; i++) g += `<line x1="8" x2="${w-8}" y1="${sy(i*2)}" y2="${sy(i*2)}" stroke="#888"/>`;
-  for (let s = 0; s < 6; s++) g += `<line x1="8" x2="${w-8}" y1="${TY+s*TG}" y2="${TY+s*TG}" stroke="#888"/>`;
-  g += `<line x1="8" x2="8" y1="${sy(8)}" y2="${sy(0)}" stroke="#888"/><line x1="8" x2="8" y1="${TY}" y2="${TY+5*TG}" stroke="#888"/>`;
-  g += `<text x="14" y="${sy(1.2)}" font-size="62" fill="#ddd" font-family="'Noto Music','Bravura',FreeSerif,serif">\u{1D11E}</text>`;
-  g += `<text x="30" y="${TY+1.5*TG}" font-size="20" font-weight="700" fill="#ddd" text-anchor="middle">T</text>` +
-       `<text x="30" y="${TY+3*TG}" font-size="20" font-weight="700" fill="#ddd" text-anchor="middle">A</text>` +
-       `<text x="30" y="${TY+4.5*TG}" font-size="20" font-weight="700" fill="#ddd" text-anchor="middle">B</text>`;
+  let g = sheetBase(w);
   notes.forEach((n, i) => {
     const x = X0 + i * W + W / 2, step = n.d - 30; // 0 = bottom staff line (E4)
     const cur = i === SC.idx, done = i < SC.idx;
@@ -681,13 +771,80 @@ function drawSheet() {
          `<text x="${x}" y="${ty+5}" font-size="14" font-weight="700" fill="${col}" text-anchor="middle">${n.fret}</text>`;
     g += `</g>`;
   });
-  $('#sheet').innerHTML = `<svg width="${w}" height="${H}" viewBox="0 0 ${w} ${H}">${g}</svg>`;
-  const cell = $('#sheet .cell[data-i="' + Math.min(SC.idx, notes.length - 1) + '"]');
-  if (cell) {
-    const box = $('#sheet'), x = X0 + SC.idx * W;
-    if (x < box.scrollLeft + 60 || x > box.scrollLeft + box.clientWidth - 80) box.scrollLeft = Math.max(0, x - box.clientWidth / 3);
-  }
+  $('#sheet').innerHTML = `<svg style="max-width:${w}px" viewBox="0 0 ${w} ${H}">${g}</svg>`;
 }
+
+
+// ---- chord data ----
+// [degree, semitones above the root] for each chord quality.
+const CHORD_Q = {
+  '':     [[1,0],[3,4],[5,7]],
+  m:      [[1,0],[3,3],[5,7]],
+  7:      [[1,0],[3,4],[5,7],[7,10]],
+  maj7:   [[1,0],[3,4],[5,7],[7,11]],
+  m7:     [[1,0],[3,3],[5,7],[7,10]],
+  sus2:   [[1,0],[2,2],[5,7]],
+  sus4:   [[1,0],[4,5],[5,7]],
+};
+const Q_ALIAS = {'':'', maj:'', M:'', m:'m', min:'m', '-':'m', 7:'7', dom7:'7', maj7:'maj7', M7:'maj7', m7:'m7', min7:'m7', sus2:'sus2', sus4:'sus4', sus:'sus4'};
+// The usual open-position shapes (low E to high e, x = muted). The first is the most common.
+const OPEN_SHAPES = {
+  C:['x32010'], D:['xx0232'], E:['022100'], G:['320003','320033'], A:['x02220'],
+  Am:['x02210'], Dm:['xx0231'], Em:['022000'],
+  C7:['x32310'], D7:['xx0212'], E7:['020100','022130'], G7:['320001'], A7:['x02020'], B7:['x21202'],
+  Cmaj7:['x32000'], Dmaj7:['xx0222'], Emaj7:['021100'], Fmaj7:['xx3210'], Gmaj7:['320002'], Amaj7:['x02120'],
+  Am7:['x02010'], Dm7:['xx0211'], Em7:['022030','020000'],
+  Asus2:['x02200'], Asus4:['x02230'], Dsus2:['xx0230'], Dsus4:['xx0233'], Esus4:['022200'], Gsus4:['330013'],
+};
+// Moveable shapes: fret offsets from the root fret, null = muted. `pc` is the open pitch class of the root string.
+const X = null;
+const MOVEABLE = [
+  {name:'E', pc:4, q:{'':[0,2,2,1,0,0], m:[0,2,2,0,0,0], 7:[0,2,0,1,0,0], maj7:[0,2,1,1,0,0], m7:[0,2,0,0,0,0], sus4:[0,2,2,2,0,0]}},
+  {name:'A', pc:9, q:{'':[X,0,2,2,2,0], m:[X,0,2,2,1,0], 7:[X,0,2,0,2,0], maj7:[X,0,2,1,2,0], m7:[X,0,2,0,1,0], sus2:[X,0,2,2,0,0], sus4:[X,0,2,2,3,0]}},
+  {name:'D', pc:2, q:{'':[X,X,0,2,3,2], m:[X,X,0,2,3,1], 7:[X,X,0,2,1,2], maj7:[X,X,0,2,2,2], m7:[X,X,0,2,1,1], sus2:[X,X,0,2,3,0], sus4:[X,X,0,2,3,3]}},
+];
+const MAX_CHORD_FRET = 12;
+
+function parseRoot(name) {
+  const m = /^([A-Ga-g])([#b♯♭]?)$/.exec(name);
+  if (!m) return null;
+  const rl = LETTERS.indexOf(m[1].toUpperCase()), a = m[2] === '#' || m[2] === '♯' ? 1 : m[2] ? -1 : 0;
+  return {rl, acc:a, pc:(NAT_PC[rl] + a + 12) % 12};
+}
+const accName = a => a > 0 ? '♯'.repeat(a) : '♭'.repeat(-a);
+
+// "Am7", "F#m", "Bbmaj7" ... -> {name, q, rl, pc, tones} or null
+function parseChord(text) {
+  const m = /^([A-Ga-g][#b♯♭]?)(.*)$/.exec(text.trim());
+  if (!m || !Object.hasOwn(Q_ALIAS, m[2])) return null;
+  const root = parseRoot(m[1]);
+  if (!root) return null;
+  const q = Q_ALIAS[m[2]], tones = {}; // pitch class -> letter index, to spell the notes
+  for (const [deg, semis] of CHORD_Q[q]) tones[(root.pc + semis) % 12] = (root.rl + deg - 1) % 7;
+  return {name:LETTERS[root.rl] + accName(root.acc) + q, key:LETTERS[root.rl] + (root.acc > 0 ? '#' : root.acc < 0 ? 'b' : '') + q, q, ...root, tones};
+}
+
+// Every shape we know for a chord, most common first.
+function voicingsFor(c) {
+  const out = [], seen = new Set();
+  const add = (frets, label) => {
+    const k = frets.map(f => f == null ? 'x' : f.toString(16)).join('');
+    if (seen.has(k) || Math.max(...frets.filter(f => f != null)) > MAX_CHORD_FRET) return;
+    seen.add(k); out.push({key:k, frets, label});
+  };
+  for (const sh of OPEN_SHAPES[c.key] || []) add([...sh].map(ch => ch === 'x' ? null : +ch), 'Open');
+  const moved = [];
+  for (const sh of MOVEABLE) {
+    const t = sh.q[c.q];
+    if (!t) continue;
+    const f = (c.pc - sh.pc + 12) % 12;
+    moved.push({frets:t.map(o => o == null ? null : o + f), label:`${sh.name} shape${f ? ', fret ' + f : ''}`});
+  }
+  moved.sort((a, b) => Math.max(...a.frets.filter(f => f != null)) - Math.max(...b.frets.filter(f => f != null)));
+  for (const v of moved) add(v.frets, v.label);
+  return out;
+}
+// ---- end chord data ----
 
 function showScales(t) {
   const heard = $('#sc-heard'), msg = $('#sc-msg');
@@ -720,6 +877,392 @@ $('#sheet').onclick = e => {
 };
 buildScale();
 
+// ---- chord practice ----
+// [scale degree, semitones above the key, chord quality]
+const PROGS = {
+  '1-4-5':    {name:'I – IV – V',            steps:[[1,0,''],[4,5,''],[5,7,'']]},
+  '1-5-6-4':  {name:'I – V – vi – IV',       steps:[[1,0,''],[5,7,''],[6,9,'m'],[4,5,'']]},
+  '1-6-4-5':  {name:'I – vi – IV – V',       steps:[[1,0,''],[6,9,'m'],[4,5,''],[5,7,'']]},
+  '2-5-1':    {name:'ii – V – I (jazzy)',    steps:[[2,2,'m7'],[5,7,'7'],[1,0,'maj7']]},
+  'blues':    {name:'12-bar blues',          steps:[[1,0,'7'],[1,0,'7'],[1,0,'7'],[1,0,'7'],[4,5,'7'],[4,5,'7'],[1,0,'7'],[1,0,'7'],[5,7,'7'],[4,5,'7'],[1,0,'7'],[5,7,'7']]},
+  'm-6-3-7':  {name:'Minor: i – VI – III – VII', steps:[[1,0,'m'],[6,8,''],[3,3,''],[7,10,'']]},
+  'm-4-5':    {name:'Minor: i – iv – v',     steps:[[1,0,'m'],[4,5,'m'],[5,7,'m']]},
+  'custom':   {name:'Custom (type below)',   steps:null},
+};
+const CH = {chords:[], idx:0, timer:0, done:new Set(), hold:0, armed:false, finished:0};
+const FING_KEY = 'chordFingerings'; // chord name -> shape key, kept for this browser session
+let fingerings = {};
+try { fingerings = JSON.parse(sessionStorage.getItem(FING_KEY) || '{}'); } catch (e) {}
+const saveFingerings = () => { try { sessionStorage.setItem(FING_KEY, JSON.stringify(fingerings)); } catch (e) {} };
+const chosenVoicing = c => c.voicings.find(v => v.key === fingerings[c.name]) || c.voicings[0];
+
+function progText(keyName, steps) {
+  const root = parseRoot(keyName);
+  return steps.map(([deg, semis, q]) => {
+    const li = (root.rl + deg - 1) % 7, acc = (((root.pc + semis) % 12 - NAT_PC[li] + 18) % 12) - 6;
+    return LETTERS[li] + (acc > 0 ? '#'.repeat(acc) : 'b'.repeat(-acc)) + q;
+  }).join(' ');
+}
+
+function resetChordRun(rewind) {
+  clearTimeout(CH.finished); CH.finished = 0; CH.done.clear(); CH.hold = 0; CH.armed = false;
+  if (rewind) { CH.idx = 0; drawChords(); }
+}
+
+// Move on when the recogniser has heard the current chord for ~0.25 s.
+function showChords(h) {
+  const heard = $('#ch-heard'), msg = $('#ch-msg'), c = CH.chords[CH.idx];
+  heard.className = '';
+  if (CH.finished) { heard.textContent = '–'; msg.textContent = 'Progression complete! Restarting in 5 seconds…'; return; }
+  if (!$('#ch-listen').checked || !c) { heard.textContent = '–'; msg.textContent = ''; CH.hold = 0; return; }
+  if (!h.active) { CH.hold = 0; CH.armed = true; heard.textContent = '–'; msg.textContent = 'Play ' + c.name; return; }
+  const ok = h.root === c.pc && h.quality === c.q;
+  heard.textContent = h.name; heard.className = ok ? 'ok' : 'bad';
+  msg.textContent = ok ? '✓' : 'Play ' + c.name;
+  if (!ok) CH.armed = true;  // something else has been heard since the last advance
+  CH.hold = ok && CH.armed ? CH.hold + 1 : 0;
+  if (CH.hold < 4) return;
+  CH.hold = 0; CH.armed = false; CH.done.add(CH.idx);
+  if (CH.idx === CH.chords.length - 1) { CH.finished = setTimeout(() => resetChordRun(true), 5000); drawChords(); }
+  else stepChord(1);
+}
+
+function buildChords() {
+  const bad = [], list = [];
+  for (const word of $('#ch-text').value.split(/[\s,|]+/).filter(Boolean)) {
+    const c = parseChord(word);
+    if (!c) { bad.push(word); continue; }
+    c.voicings = voicingsFor(c);
+    if (c.voicings.length) list.push(c); else bad.push(word);
+  }
+  CH.chords = list.slice(0, 16);
+  CH.idx = Math.min(CH.idx, Math.max(0, CH.chords.length - 1));
+  resetChordRun(false);
+  $('#ch-err').textContent = bad.length ? `Couldn't read: ${bad.join(', ')}. Try names like C, Am, G7, Fmaj7, Dm7, Asus4.` : '';
+  closePop();
+  drawChords();
+}
+function fillProgression() {
+  const steps = PROGS[$('#ch-prog').value].steps;
+  if (steps) { $('#ch-text').value = progText($('#ch-key').value, steps); CH.idx = 0; buildChords(); }
+}
+
+function drawChords() {
+  const {X0, YB, TY, TG} = SHEET, W = 120, sy = step => YB - step * 5, chords = CH.chords;
+  const w = X0 + Math.max(chords.length, 1) * W + 10, H = TY + 5 * TG + 40;
+  let g = sheetBase(w);
+  chords.forEach((c, i) => {
+    const v = chosenVoicing(c), cx = X0 + i * W + W / 2, cur = i === CH.idx;
+    const col = CH.done.has(i) ? '#3ddc84' : cur ? '#ff8a00' : '#eee';
+    if (cur) g += `<rect x="${cx-W/2}" y="0" width="${W}" height="${H}" fill="#ff8a0022"/>`;
+    g += `<text class="cname" data-i="${i}" x="${cx}" y="34" font-size="22" font-weight="700" fill="${col}" text-anchor="middle">${c.name}</text>`;
+
+    // staff: one chord, notes low to high; a note a step above its neighbour goes to the right of the stem
+    const notes = v.frets.map((f, s) => f == null ? null : spell(OPEN_MIDI.standard[s] + f, c.tones[(OPEN_MIDI.standard[s] + f) % 12]))
+      .filter(Boolean).sort((a, b) => a.d - b.d).filter((n, k, all) => !k || n.d !== all[k-1].d);
+    let prev = null, accs = 0;
+    const lo = notes[0].d - 30, hi = notes[notes.length - 1].d - 30;
+    for (let l = -2; l >= lo; l -= 2) g += `<line x1="${cx-14}" x2="${cx+14}" y1="${sy(l)}" y2="${sy(l)}" stroke="#aaa"/>`;
+    for (let l = 10; l <= hi; l += 2) g += `<line x1="${cx-14}" x2="${cx+14}" y1="${sy(l)}" y2="${sy(l)}" stroke="#aaa"/>`;
+    g += `<line x1="${cx+6.5}" x2="${cx+6.5}" y1="${sy(lo)}" y2="${sy(hi) - 30}" stroke="${col}" stroke-width="1.6"/>`;
+    for (const n of notes) {
+      const step = n.d - 30, y = sy(step), shift = prev && step - prev.step === 1 && !prev.shifted;
+      g += `<ellipse cx="${cx + (shift ? 13 : 0)}" cy="${y}" rx="7" ry="5" fill="${col}" transform="rotate(-20 ${cx + (shift ? 13 : 0)} ${y})"/>`;
+      if (n.acc) g += `<text x="${cx - 12 - 11 * accs++}" y="${y+5}" font-size="18" fill="${col}" text-anchor="end">${accName(n.acc)}</text>`;
+      prev = {step, shifted:shift};
+    }
+
+    // tab
+    v.frets.forEach((f, s) => {
+      const ty = TY + (5 - s) * TG;
+      g += `<rect x="${cx-8}" y="${ty-7}" width="16" height="14" fill="#16161b"/>` +
+           `<text x="${cx}" y="${ty+5}" font-size="14" font-weight="700" fill="${f == null ? '#777' : col}" text-anchor="middle">${f == null ? 'x' : f}</text>`;
+    });
+    g += `<rect class="tabhit" data-i="${i}" x="${cx-W/2+6}" y="${TY-12}" width="${W-12}" height="${5*TG+24}" rx="6"><title>Click to choose a different fingering</title></rect>`;
+    if (c.voicings.length > 1) g += `<text x="${cx}" y="${TY+5*TG+28}" font-size="11" fill="#8a8a92" text-anchor="middle" pointer-events="none">▾ ${v.label}</text>`;
+  });
+  $('#csheet').innerHTML = `<svg style="max-width:${w}px" viewBox="0 0 ${w} ${H}">${g}</svg>`;
+}
+
+// A small fretboard diagram of one shape.
+function diagram(frets) {
+  const used = frets.filter(f => f != null && f > 0), base = used.length && Math.max(...used) > 4 ? Math.min(...used) : 1;
+  const sx = s => 14 + s * 10, fy = r => 22 + r * 13;
+  let g = '';
+  for (let s = 0; s < 6; s++) g += `<line x1="${sx(s)}" x2="${sx(s)}" y1="${fy(0)}" y2="${fy(5)}" stroke="#888"/>`;
+  for (let r = 0; r <= 5; r++) g += `<line x1="${sx(0)}" x2="${sx(5)}" y1="${fy(r)}" y2="${fy(r)}" stroke="#888" stroke-width="${r === 0 && base === 1 ? 3 : 1}"/>`;
+  if (base > 1) g += `<text x="${sx(5) + 5}" y="${fy(0) + 10}" font-size="9" fill="#aaa">${base}</text>`;
+  if (used.length) { // draw a bar when the lowest fret is held across several strings
+    const f = Math.min(...used), at = frets.map((x, s) => x === f ? s : -1).filter(s => s >= 0);
+    if (at.length >= 3 && frets.slice(at[0], at[at.length-1] + 1).every(x => x != null && x >= f))
+      g += `<rect x="${sx(at[0]) - 4}" y="${fy(f - base) + 3}" width="${sx(at[at.length-1]) - sx(at[0]) + 8}" height="7" rx="3.5" fill="#eee"/>`;
+  }
+  frets.forEach((f, s) => {
+    if (f == null) g += `<text x="${sx(s)}" y="14" font-size="11" fill="#999" text-anchor="middle">x</text>`;
+    else if (f === 0) g += `<circle cx="${sx(s)}" cy="10" r="3" fill="none" stroke="#aaa"/>`;
+    else g += `<circle cx="${sx(s)}" cy="${fy(f - base) + 6.5}" r="4" fill="#eee"/>`;
+  });
+  return `<svg width="88" height="92" viewBox="0 0 88 92">${g}</svg>`;
+}
+
+const pop = $('#chpop');
+const closePop = () => { pop.hidden = true; };
+function openPop(i, anchor) {
+  const c = CH.chords[i], cur = chosenVoicing(c);
+  pop.innerHTML = `<div class="pophead">Fingering for ${c.name}</div><div class="popgrid">` +
+    c.voicings.map(v => `<button class="opt${v.key === cur.key ? ' on' : ''}" data-i="${i}" data-k="${v.key}">${diagram(v.frets)}<div>${v.label}</div></button>`).join('') + '</div>';
+  pop.hidden = false;
+  const wrap = $('.sheetwrap').getBoundingClientRect(), r = anchor.getBoundingClientRect();
+  pop.style.top = (r.bottom - wrap.top + 6) + 'px';
+  pop.style.left = Math.max(0, Math.min(r.left - wrap.left, wrap.width - pop.offsetWidth)) + 'px';
+}
+pop.onclick = e => {
+  const b = e.target.closest('.opt');
+  if (!b) return;
+  fingerings[CH.chords[+b.dataset.i].name] = b.dataset.k;
+  saveFingerings(); closePop(); drawChords();
+};
+$('#csheet').onclick = e => {
+  const hit = e.target.closest('.tabhit'), name = e.target.closest('.cname');
+  if (hit) { CH.idx = +hit.dataset.i; drawChords(); openPop(CH.idx, $('#csheet .tabhit[data-i="' + CH.idx + '"]')); }
+  else if (name) { CH.idx = +name.dataset.i; drawChords(); }
+};
+document.addEventListener('pointerdown', e => { if (!pop.hidden && !e.target.closest('#chpop, .tabhit')) closePop(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePop(); });
+
+const stepChord = d => { if (CH.chords.length) { CH.hold = 0; CH.idx = (CH.idx + d + CH.chords.length) % CH.chords.length; drawChords(); } };
+$('#ch-prev').onclick = () => stepChord(-1);
+$('#ch-next').onclick = () => stepChord(1);
+$('#ch-auto').onchange = () => {
+  clearInterval(CH.timer);
+  const secs = +$('#ch-auto').value;
+  if (secs) CH.timer = setInterval(() => { if (view === 'chords' && pop.hidden) stepChord(1); }, secs * 1000);
+};
+$('#ch-key').innerHTML = SC_ROOTS.map(r => `<option>${r}</option>`).join('');
+$('#ch-prog').innerHTML = Object.entries(PROGS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
+$('#ch-key').onchange = $('#ch-prog').onchange = fillProgression;
+$('#ch-text').oninput = () => { $('#ch-prog').value = 'custom'; buildChords(); };
+fillProgression();
+
+
+// ---- rhythm practice ----
+// The metronome and the judging run here in the browser. The server timestamps each note
+// or strum it hears (onsets); every hit in the pattern is matched to the nearest onset.
+const PATTERNS = {
+  quarters: {name:'Quarter notes',    p:'D.D.D.D.'},
+  eighths:  {name:'Steady eighths',   p:'DUDUDUDU'},
+  folk:     {name:'Folk strum',       p:'D.DU.UDU'},
+  rock:     {name:'Driving rock',     p:'D.D.DUDU'},
+  reggae:   {name:'Reggae offbeats',  p:'.U.U.U.U'},
+  sync:     {name:'Syncopated',       p:'D..UD.DU'},
+  custom:   {name:'Custom (type in the box)', p:null},
+};
+const CYCLE = 16; // slots on screen: two bars of eighth notes
+const R = {running:false, mode:'strum', pat:[], pre:[], notes:[], chords:[], bpm:70, cycle:-1, hits:new Map(), pending:[],
+           newOnsets:[], readings:[], lastSeq:null, nextJudge:0, latency:0, delay:0, stats:null, raf:0, sched:0, ac:null};
+
+function parsePattern(text) {
+  return [...text.toUpperCase().padEnd(8, '.').slice(0, 8)].map(c => c === 'D' || c === 'U' ? c : null);
+}
+const hitsBefore = k => Math.floor(k / 8) * R.pre[8] + R.pre[k % 8];
+const noteFor = k => R.notes[hitsBefore(k) % R.notes.length];
+const slotTime = k => R.t0 + R.delay + k * R.slotMs;
+
+function prepRhythm() {
+  stopRhythm();
+  R.mode = $('#r-mode').value;
+  R.pat = parsePattern($('#r-text').value);
+  R.pre = [0]; R.pat.forEach(h => R.pre.push(R.pre[R.pre.length - 1] + (h ? 1 : 0)));
+  $('#r-strumctl').style.display = R.mode === 'strum' ? '' : 'none';
+  $('#r-scalectl').style.display = R.mode === 'scale' ? 'flex' : 'none';
+  const err = [];
+  if (!R.pre[8]) err.push('The pattern needs at least one D or U.');
+  if (R.mode === 'scale') R.notes = makeScale($('#r-key').value, $('#r-type').value, 1, true).slice(0, -1); // the last note is the first again
+  else {
+    R.chords = [];
+    for (const w of $('#r-chords').value.split(/[\s,|]+/).filter(Boolean)) {
+      const c = parseChord(w); if (c) c.voicings = voicingsFor(c);
+      if (c && c.voicings.length) R.chords.push(c); else err.push(`Couldn't read the chord ${w}.`);
+    }
+    if (!R.chords.length) err.push('Add at least one chord.');
+  }
+  $('#r-err').textContent = err.join(' ');
+  R.ok = !err.length;
+  $('#r-start').disabled = !R.ok;
+  $('#r-stats').innerHTML = '';
+  if (R.ok) drawRhythm(0); else $('#rsheet').innerHTML = '';
+}
+
+function drawRhythm(cycle) {
+  R.cycle = cycle;
+  const {X0, YB, TY, TG} = SHEET, SW = 70, scale = R.mode === 'scale', sy = st => YB - st * 5;
+  const dy = scale ? 44 : -56, w = X0 + CYCLE * SW + 10, H = TY + dy + 5 * TG + 44;
+  let top = '', inner = sheetBase(w, scale);
+  for (let i = 0; i < CYCLE; i++) {
+    const k = cycle * CYCLE + i, x = X0 + i * SW + SW / 2, hit = R.pat[i % 8], bar = Math.floor(k / 8);
+    top += `<text x="${x}" y="20" font-size="13" fill="#8a8a92" text-anchor="middle">${i % 2 ? '&amp;' : (i % 8) / 2 + 1}</text>`;
+    if (i % 8 === 0) {
+      top += `<line x1="${X0 + i * SW}" x2="${X0 + i * SW}" y1="6" y2="${H - 26}" stroke="#555"/>`;
+      if (!scale) top += `<text x="${X0 + i * SW + 8}" y="104" font-size="22" font-weight="700" fill="#ddd">${R.chords[bar % R.chords.length].name}</text>`;
+    }
+    top += hit ? `<g id="a${i}"><text x="${x}" y="56" font-size="30" font-weight="${i % 2 ? 500 : 800}" fill="#eee" text-anchor="middle">${hit === 'D' ? '↓' : '↑'}</text></g>`
+               : `<text x="${x}" y="52" font-size="20" fill="#555" text-anchor="middle">·</text>`;
+    if (!hit) continue;
+    let g = '';
+    if (scale) {
+      const n = noteFor(k), step = n.d - 30, y = sy(step), up = step < 4;
+      for (let l = -2; l >= step; l -= 2) g += `<line x1="${x-12}" x2="${x+12}" y1="${sy(l)}" y2="${sy(l)}" stroke="#aaa"/>`;
+      for (let l = 10; l <= step; l += 2) g += `<line x1="${x-12}" x2="${x+12}" y1="${sy(l)}" y2="${sy(l)}" stroke="#aaa"/>`;
+      g += `<line x1="${x + (up ? 6.5 : -6.5)}" x2="${x + (up ? 6.5 : -6.5)}" y1="${y}" y2="${up ? y - 32 : y + 32}" stroke="#eee" stroke-width="1.6"/>` +
+           `<ellipse cx="${x}" cy="${y}" rx="7" ry="5" fill="#eee" transform="rotate(-20 ${x} ${y})"/>`;
+      if (n.acc) g += `<text x="${x-12}" y="${y+5}" font-size="18" fill="#eee" text-anchor="end">${accName(n.acc)}</text>`;
+      const ty = TY + (5 - n.string) * TG;
+      g += `<rect x="${x-8}" y="${ty-7}" width="16" height="14" fill="#16161b"/><text x="${x}" y="${ty+5}" font-size="14" font-weight="700" fill="#eee" text-anchor="middle">${n.fret}</text>` +
+           `<text id="p${i}" x="${x}" y="${TY + 5 * TG + 24}" font-size="12" fill="#c77dff" text-anchor="middle"></text>`;
+    } else {
+      chosenVoicing(R.chords[bar % R.chords.length]).frets.forEach((f, st) => {
+        const ty = TY + (5 - st) * TG;
+        g += `<rect x="${x-8}" y="${ty-7}" width="16" height="14" fill="#16161b"/><text x="${x}" y="${ty+5}" font-size="14" font-weight="700" fill="${f == null ? '#777' : '#eee'}" text-anchor="middle">${f == null ? 'x' : f}</text>`;
+      });
+    }
+    inner += `<g id="n${i}">${g}</g>`;
+  }
+  $('#rsheet').innerHTML = `<svg style="max-width:${w}px" viewBox="0 0 ${w} ${H}">${top}<g transform="translate(0,${dy})">${inner}</g>` +
+    `<line id="playhead" y1="4" y2="${H - 26}" stroke="#ff8a00" stroke-width="2" visibility="hidden"/></svg>`;
+}
+
+function setHit(k, cls) {
+  const i = k - R.cycle * CYCLE;
+  if (i < 0 || i >= CYCLE) return;
+  for (const id of ['a', 'n']) $('#' + id + i)?.setAttribute('class', cls);
+}
+
+function click(time, accent) {
+  const o = R.ac.createOscillator(), g = R.ac.createGain();
+  o.frequency.value = accent ? 1600 : 1000;
+  g.gain.setValueAtTime(0.35, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+  o.connect(g).connect(R.ac.destination); o.start(time); o.stop(time + 0.06);
+}
+
+function startRhythm() {
+  if (!R.ok) return;
+  prepRhythm();
+  try { R.ac = R.ac || new AudioContext(); R.ac.resume(); } catch (e) { R.ac = null; }
+  R.bpm = +$('#r-bpm').value; R.beatMs = 60000 / R.bpm; R.slotMs = R.beatMs / 2;
+  R.latency = +$('#r-lat').value || 0;
+  R.delay = R.ac ? (R.ac.outputLatency || R.ac.baseLatency || 0) * 1000 : 0; // you play to the click you hear
+  R.E0 = Date.now() + 300; R.t0 = R.E0 + 4 * R.beatMs; // 4 beats of count-in, then the pattern
+  R.win = Math.min(110, R.slotMs * 0.45);
+  R.hits.clear(); R.pending = []; R.newOnsets = []; R.nextJudge = 0; R.lastSeq = null;
+  R.stats = {judged:0, miss:0, good:0, ok:0, poor:0, sumDt:0, matched:0, streak:0, best:0, extra:0, notes:0, notesOk:0};
+  R.running = true; $('#r-start').textContent = 'Stop';
+  if (R.ac && $('#r-click').checked) {
+    const A0 = R.ac.currentTime + 0.3; let next = 0;
+    R.sched = setInterval(() => {
+      while (A0 + next * R.beatMs / 1000 < R.ac.currentTime + 0.15) { click(A0 + next * R.beatMs / 1000, next % 4 === 0); next++; }
+    }, 25);
+  }
+  R.raf = setInterval(rhythmFrame, 25); // a timer, not requestAnimationFrame, so judging carries on if the tab is throttled
+}
+
+function stopRhythm() {
+  if (!R.running) return;
+  R.running = false; clearInterval(R.sched); clearInterval(R.raf);
+  $('#r-start').textContent = 'Start'; $('#r-count').textContent = ''; $('#r-msg').textContent = 'Stopped.';
+  $('#playhead')?.setAttribute('visibility', 'hidden');
+}
+
+const classFor = dt => Math.abs(dt) <= 40 ? 'good' : Math.abs(dt) <= 80 ? 'ok' : 'poor';
+
+function judge(now) {
+  const st = R.stats;
+  for (const o of R.newOnsets.splice(0)) {
+    const t = o.t - R.latency, k = Math.round((t - R.t0 - R.delay) / R.slotMs), dt = t - slotTime(k);
+    if (k < 0) continue; // count-in
+    if (R.pat[k % 8] && Math.abs(dt) <= R.win && !R.hits.has(k)) {
+      const cls = classFor(dt);
+      R.hits.set(k, {dt, t});
+      st.judged++; st.matched++; st.sumDt += dt; st[cls]++;
+      if (cls === 'poor') st.streak = 0; else st.best = Math.max(st.best, ++st.streak);
+      setHit(k, 'rh-' + cls);
+      if (R.mode === 'scale') R.pending.push(k);
+    } else st.extra++;
+  }
+  while (slotTime(R.nextJudge) + R.win < now) { // hits whose time has passed without a note
+    const k = R.nextJudge++;
+    if (R.pat[k % 8] && !R.hits.has(k)) { R.hits.set(k, {miss:true}); st.judged++; st.miss++; st.streak = 0; setHit(k, 'rh-miss'); }
+  }
+  // is the note right? look at the pitch heard shortly after the pluck
+  const endWin = Math.min(320, R.slotMs - 30);
+  R.pending = R.pending.filter(k => {
+    const h = R.hits.get(k);
+    if (now < h.t + endWin) return true;
+    const want = noteFor(k), seen = R.readings.filter(r => r.midi != null && r.t >= h.t + 90 && r.t <= h.t + endWin), count = {};
+    let heard = null;
+    for (const r of seen) if ((count[r.midi] = (count[r.midi] || 0) + 1) > (count[heard] || 0)) heard = r.midi;
+    st.notes++;
+    if (heard === want.midi) st.notesOk++;
+    else {
+      setHit(k, 'rh-wrong');
+      const i = k - R.cycle * CYCLE;
+      if (i >= 0 && i < CYCLE && $('#p' + i)) $('#p' + i).textContent = heard == null ? 'no pitch' : SHARP_NAMES[heard % 12] + (Math.floor(heard / 12) - 1);
+    }
+    return false;
+  });
+}
+
+function rhythmStats() {
+  const st = R.stats;
+  if (!st || !st.judged) { $('#r-stats').innerHTML = ''; return; }
+  const onTime = Math.round(100 * (st.good + 0.5 * st.ok) / st.judged), avg = st.matched ? st.sumDt / st.matched : 0;
+  $('#r-stats').innerHTML = `<span>Hits <b>${st.matched}/${st.judged}</b></span><span>On time <b>${onTime}%</b></span>` +
+    `<span>Average <b>${avg >= 0 ? '+' : ''}${avg.toFixed(0)} ms</b> ${Math.abs(avg) < 10 ? '' : avg > 0 ? '(late)' : '(early)'}</span>` +
+    `<span>Streak <b>${st.streak}</b> (best ${st.best})</span>` + (st.extra ? `<span>Extra notes <b>${st.extra}</b></span>` : '') +
+    (R.mode === 'scale' ? `<span>Right notes <b>${st.notesOk}/${st.notes}</b></span>` : '');
+}
+
+function rhythmFrame() {
+  if (!R.running) return;
+  const now = Date.now(), pos = (now - R.delay - R.t0) / R.slotMs, ph = $('#playhead');
+  if (pos < 0) {
+    const beat = Math.min(4, Math.floor((now - R.delay - R.E0) / R.beatMs) + 1);
+    $('#r-count').textContent = beat > 0 ? beat : '';
+    $('#r-msg').textContent = 'Count-in…';
+  } else {
+    $('#r-count').textContent = ''; $('#r-msg').textContent = 'Play along!';
+    const c = Math.floor(pos / CYCLE);
+    if (c !== R.cycle) drawRhythm(c);
+    const x = SHEET.X0 + (pos % CYCLE) * 70 + 35, line = $('#playhead');
+    line.setAttribute('x1', x); line.setAttribute('x2', x); line.setAttribute('visibility', 'visible');
+  }
+  judge(now); rhythmStats();
+}
+
+// called with each poll of the server while the Rhythm tab is open
+function showRhythm(s) {
+  const now = Date.now(), t = s.tuner, onsets = s.onsets || [];
+  R.readings.push({t:now, midi:t.active ? Math.round(69 + 12 * Math.log2(t.freq / 440)) : null});
+  while (R.readings.length && R.readings[0].t < now - 3000) R.readings.shift();
+  if (R.lastSeq == null) R.lastSeq = onsets.length ? onsets[onsets.length - 1].seq : 0; // ignore notes from before Start
+  for (const o of onsets) if (o.seq > R.lastSeq) { R.lastSeq = o.seq; if (R.running) R.newOnsets.push(o); }
+}
+
+$('#r-pat').innerHTML = Object.entries(PATTERNS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
+$('#r-pat').value = 'folk'; $('#r-text').value = PATTERNS.folk.p;
+$('#r-key').innerHTML = SC_ROOTS.map(r => `<option>${r}</option>`).join('');
+$('#r-type').innerHTML = Object.entries(SCALES).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
+$('#r-pat').onchange = () => { const p = PATTERNS[$('#r-pat').value].p; if (p) $('#r-text').value = p; prepRhythm(); };
+$('#r-text').oninput = () => { $('#r-pat').value = 'custom'; prepRhythm(); };
+['#r-mode', '#r-chords', '#r-key', '#r-type'].forEach(id => $(id).onchange = prepRhythm);
+$('#r-chords').oninput = prepRhythm;
+$('#r-bpm').oninput = () => { $('#r-bpmv').textContent = $('#r-bpm').value; if (R.running) stopRhythm(); };
+$('#r-start').onclick = () => R.running ? stopRhythm() : startRhythm();
+$('#r-adj').onclick = () => {
+  const st = R.stats;
+  if (st && st.matched) { $('#r-lat').value = Math.round(R.latency + st.sumDt / st.matched); $('#r-msg').textContent = 'Timing adjusted. Start again to try it.'; }
+};
+$('#r-adj').title = 'After a run: shift the timing by your average error so it reads as zero';
+
 async function poll(first) {
   try {
     const s = await (await fetch('/api/state')).json();
@@ -733,6 +1276,8 @@ async function poll(first) {
     showSource(s.source);
     showTuner(s.tuner);
     if (scalesOn) showScales(s.tuner);
+    if (view === 'chords') showChords(s.chord);
+    if (view === 'rhythm') showRhythm(s);
   } catch (e) {}
   setTimeout(() => poll(false), 66);
 }

@@ -113,6 +113,13 @@ type Engine struct {
 	ring   []float64 // recent raw input for the tuner
 	ringAt int
 
+	chordRing []float64 // longer history of raw input for chord recognition
+	chordAt   int
+	chord     ChordReading
+
+	onsets   []Onset // recent note/strum starts, for rhythm practice
+	onsetSeq uint64
+
 	outRing  []float64 // recent output for the visualizer
 	outAt    int
 	spectrum []float64
@@ -120,6 +127,7 @@ type Engine struct {
 	want      string        // source chosen in the UI ("" = auto-detect the guitar)
 	active    string        // source currently being captured, "" if disconnected
 	switchSrc chan struct{} // poked when the UI picks another source
+	saveCh    chan struct{} // poked when params change, if autosave is on
 }
 
 // setSource selects the capture device ("" = auto) and wakes the audio loop.
@@ -146,6 +154,10 @@ func (e *Engine) update(fn func(*Params)) Params {
 	fn(&p)
 	p.sanitize()
 	e.p = p
+	select {
+	case e.saveCh <- struct{}{}:
+	default:
+	}
 	return p
 }
 
@@ -331,10 +343,19 @@ func main() {
 	in := flag.String("in", "", "input source (default: auto-detect the guitar interface)")
 	out := flag.String("out", "", "output sink (default: system default)")
 	addr := flag.String("addr", "127.0.0.1:8765", "web UI address")
+	statePath := flag.String("state", defaultStatePath(), "file that remembers the pedalboard between runs (\"\" = don't save)")
 	flag.Parse()
 
-	eng := &Engine{p: defaultParams(), ring: make([]float64, 4096), outRing: make([]float64, 2048), want: *in, switchSrc: make(chan struct{}, 1)}
+	startParams := defaultParams()
+	if *statePath != "" {
+		startParams = loadParams(*statePath)
+	}
+	eng := &Engine{p: startParams, ring: make([]float64, 4096), chordRing: make([]float64, chordWindow), outRing: make([]float64, 2048), want: *in, switchSrc: make(chan struct{}, 1)}
+	if *statePath != "" {
+		eng.autosave(*statePath)
+	}
 	go eng.runTuner()
+	go eng.runChords()
 	go eng.runSpectrum()
 	go serve(eng, *addr)
 
@@ -367,6 +388,7 @@ func main() {
 	fmt.Fprintf(os.Stderr, "open http://%s  (ctrl+c to stop; use headphones or keep volume low to avoid feedback)\n", *addr)
 
 	var fx dsp
+	var od onsetDetector
 	raw := make([]byte, blockSize*2)
 	block := make([]float64, blockSize)
 	outBlock := make([]float64, blockSize)
@@ -424,7 +446,11 @@ func main() {
 				binary.LittleEndian.PutUint16(raw[i*2:], uint16(int16(x*32767)))
 				outBlock[i] = x
 			}
+			onset, onsetLevel := od.process(block)
 			eng.mu.Lock()
+			if onset {
+				eng.addOnset(onsetLevel)
+			}
 			for _, v := range outBlock {
 				eng.outRing[eng.outAt] = v
 				eng.outAt = (eng.outAt + 1) % len(eng.outRing)
@@ -433,6 +459,8 @@ func main() {
 			for _, v := range block {
 				eng.ring[eng.ringAt] = v
 				eng.ringAt = (eng.ringAt + 1) % len(eng.ring)
+				eng.chordRing[eng.chordAt] = v
+				eng.chordAt = (eng.chordAt + 1) % len(eng.chordRing)
 			}
 			eng.mu.Unlock()
 			_, err := dst.Write(raw)
