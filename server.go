@@ -28,13 +28,35 @@ func serve(e *Engine, addr string) {
 		}
 		e.mu.Lock()
 		state := struct {
-			Params Params  `json:"params"`
-			Level  float64 `json:"level"`
-			Tuner  Reading `json:"tuner"`
-		}{e.p, e.level, e.tuner}
+			Params   Params    `json:"params"`
+			Level    float64   `json:"level"`
+			Tuner    Reading   `json:"tuner"`
+			Spectrum []float64 `json:"spectrum"`
+			Source   struct {
+				Want   string `json:"want"`
+				Active string `json:"active"`
+			} `json:"source"`
+		}{Params: e.p, Level: e.level, Tuner: e.tuner}
+		state.Source.Want, state.Source.Active = e.want, e.active
+		state.Spectrum = append([]float64(nil), e.spectrum...)
 		e.mu.Unlock()
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(state)
+	})
+	// GET: capture devices currently present. POST {"name": "..."}: pick one ("" = auto).
+	mux.HandleFunc("/api/sources", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			var body struct {
+				Name string `json:"name"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			e.setSource(body.Name)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(listSources())
 	})
 	log.Fatal(http.ListenAndServe(addr, mux))
 }

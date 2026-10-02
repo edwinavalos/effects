@@ -3,22 +3,86 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Go Pedal</title>
 <style>
-  :root { --bg:#16161a; --card:#222228; --fg:#eee; --dim:#888; --acc:#ff8a00; --ok:#3ddc84; }
+  :root { --bg:#141416; --fg:#eee; --dim:#8a8a92; --acc:#ff8a00; --ok:#3ddc84; --card:#222228 }
   * { box-sizing:border-box }
   body { margin:0; background:var(--bg); color:var(--fg); font:15px system-ui,sans-serif; display:flex; justify-content:center }
-  main { width:100%; max-width:520px; padding:16px }
-  h1 { font-size:18px; margin:0 0 12px }
-  .tabs { display:flex; gap:8px; margin-bottom:12px }
-  .tabs button { flex:1; padding:10px; border:0; border-radius:8px; background:var(--card); color:var(--dim); font-size:15px; cursor:pointer }
+  main { width:100%; max-width:1100px; padding:16px }
+  header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:14px }
+  h1 { font-size:18px; margin:0; margin-right:auto }
+  .tabs { display:flex; gap:6px }
+  .tabs button { padding:8px 16px; border:0; border-radius:8px; background:var(--card); color:var(--dim); font-size:14px; cursor:pointer }
   .tabs button.on { background:var(--acc); color:#000; font-weight:600 }
-  .card { background:var(--card); border-radius:12px; padding:14px; margin-bottom:12px }
-  .card h2 { font-size:14px; margin:0 0 8px; display:flex; justify-content:space-between; align-items:center }
-  label { display:flex; align-items:center; gap:10px; margin:6px 0; color:var(--dim) }
-  label span:first-child { width:80px }
-  label output { width:52px; text-align:right; color:var(--fg); font-variant-numeric:tabular-nums }
-  input[type=range] { flex:1; accent-color:var(--acc) }
-  .meter { height:8px; background:#000; border-radius:4px; overflow:hidden }
+  select { background:#111; color:var(--fg); border:1px solid #444; border-radius:6px; padding:5px 8px; max-width:100%; font:inherit }
+
+  .bar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; background:var(--card); border-radius:12px; padding:10px 14px; margin-bottom:14px }
+  .bar .dot { width:10px; height:10px; border-radius:50%; background:#c33; flex:none }
+  .bar .dot.on { background:var(--ok); box-shadow:0 0 8px var(--ok) }
+  .bar .status { color:var(--dim); font-size:13px }
+  .meter { flex:1; min-width:120px; height:8px; background:#000; border-radius:4px; overflow:hidden }
   .meter div { height:100%; width:0; background:var(--ok); transition:width .06s }
+
+  /* pedalboard */
+  .board { background:repeating-linear-gradient(90deg,#2a2622 0 6px,#252119 6px 12px); border:3px solid #111; border-radius:14px;
+           padding:18px 14px; display:flex; flex-wrap:wrap; gap:18px 10px; align-items:stretch; box-shadow:inset 0 0 30px #000a }
+  .jack { align-self:center; width:56px; text-align:center; font-size:11px; color:var(--dim); letter-spacing:.08em; text-transform:uppercase }
+  .jack i { display:block; width:26px; height:26px; margin:0 auto 4px; border-radius:50%; background:radial-gradient(#111 30%,#777 32%,#333 60%); border:2px solid #555 }
+  .cable { align-self:center; width:22px; height:6px; border-radius:3px; background:#000; flex:none }
+  .pedal { --c:#c33; position:relative; width:200px; padding:10px 10px 12px; border-radius:10px; background:linear-gradient(160deg,var(--c),color-mix(in srgb,var(--c) 55%,#000));
+           border:2px solid #0006; box-shadow:0 6px 14px #000a, inset 0 1px 0 #fff4; color:#fff; display:flex; flex-direction:column; align-items:center; gap:8px; transition:opacity .15s, transform .15s }
+  .pedal.off { filter:saturate(.35) brightness(.75) }
+  .pedal.dragging { opacity:.35 }
+  .pedal.over-l { box-shadow:-8px 0 0 0 #fff, 0 6px 14px #000a }
+  .pedal.over-r { box-shadow:8px 0 0 0 #fff, 0 6px 14px #000a }
+  .rm { position:absolute; top:-9px; right:-9px; width:22px; height:22px; border-radius:50%; border:2px solid #000; background:#222; color:#ccc; font-size:11px; line-height:1; cursor:pointer; opacity:0; transition:opacity .15s; z-index:2 }
+  .pedal:hover .rm, .rm:focus-visible { opacity:1 }
+  .empty { align-self:center; color:var(--dim); border:2px dashed #555; border-radius:10px; padding:26px 20px }
+  .tray { margin-top:14px; background:var(--card); border-radius:12px; padding:12px 14px; border:2px dashed transparent }
+  .tray.over { border-color:var(--acc) }
+  .trayhead { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:10px }
+  .trayhead .hint { flex:1; min-width:180px }
+  .trayhead button { border:0; border-radius:6px; background:#333; color:var(--fg); padding:5px 10px; cursor:pointer; font:inherit; font-size:13px }
+  .hint { color:var(--dim); font-size:13px }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; min-height:34px }
+  .chip { display:flex; align-items:center; gap:8px; padding:6px 6px 6px 12px; border-radius:20px; cursor:grab; font-weight:700; font-size:13px; color:#fff;
+          background:linear-gradient(160deg,var(--c),color-mix(in srgb,var(--c) 55%,#000)); box-shadow:0 2px 5px #0008 }
+  .chip.dragging { opacity:.4 }
+  .chip button { width:22px; height:22px; border-radius:50%; border:0; background:#0005; color:#fff; cursor:pointer; line-height:1 }
+  .pedal .top { width:100%; display:flex; align-items:center; gap:4px }
+  .pedal .grip { cursor:grab; user-select:none; padding:2px 4px; opacity:.75; font-size:16px; line-height:1 }
+  .pedal .name { flex:1; text-align:center; font-weight:800; letter-spacing:.06em; text-transform:uppercase; font-size:13px; text-shadow:0 1px 0 #0006 }
+  .pedal .mv { border:0; background:#0004; color:#fff; width:24px; height:24px; border-radius:6px; cursor:pointer; font-size:12px }
+  .pedal .mv:disabled { opacity:.25; cursor:default }
+  .knobs { display:flex; flex-wrap:wrap; justify-content:center; gap:10px 8px; min-height:74px }
+  .knobbox { width:52px; text-align:center; font-size:10px; text-transform:uppercase; letter-spacing:.05em }
+  .knob { position:relative; width:46px; height:46px; margin:0 auto 3px; border-radius:50%; cursor:ns-resize; touch-action:none;
+          background:radial-gradient(circle at 35% 30%,#666,#1a1a1a 70%); border:2px solid #000; box-shadow:0 3px 5px #0009 }
+  .knob::after { content:""; position:absolute; left:50%; top:3px; width:3px; height:15px; margin-left:-1.5px; border-radius:2px; background:#fff; transform-origin:50% 20px; transform:rotate(var(--r)) }
+  .knob:focus-visible { outline:2px solid #fff }
+  .knobbox output { display:block; color:#fffc; font-size:10px; letter-spacing:0; text-transform:none; font-variant-numeric:tabular-nums }
+  .foot { width:54px; height:54px; border-radius:50%; border:3px solid #000; cursor:pointer; margin-top:2px; position:relative;
+          background:radial-gradient(circle at 35% 30%,#ddd,#777 60%,#444); box-shadow:0 4px 6px #000a }
+  .foot:active { transform:translateY(2px) }
+  .led { position:absolute; left:8px; top:8px; width:12px; height:12px; border-radius:50%; background:#400; border:1px solid #000 }
+  .pedal:not(.off) .led { background:#f22; box-shadow:0 0 10px 2px #f22 }
+  .pedal.master { width:150px; --c:#3a4a5c }
+  .pedal.master .knobs { min-height:74px }
+
+  .vizwrap { position:relative; margin-bottom:14px }
+  .viz { display:block; width:100%; height:220px; border-radius:12px; background:#0b0b10; touch-action:pan-y; user-select:none }
+  .vnav { position:absolute; top:50%; left:8px; transform:translateY(-50%); width:36px; height:36px; border:0; border-radius:50%; background:#fff2; color:#fff; font-size:24px; line-height:1; cursor:pointer }
+  .vnav.r { left:auto; right:8px }
+  .vnav.fs { top:8px; right:8px; left:auto; transform:none; width:32px; height:32px; font-size:18px }
+  .vnav:hover { background:#fff4 }
+  .vdots { position:absolute; bottom:8px; left:0; right:0; display:flex; justify-content:center; gap:7px }
+  .vdots i { width:9px; height:9px; border-radius:50%; background:#fff4; cursor:pointer }
+  .vdots i.on { background:#fff }
+  .vizwrap:fullscreen { margin:0; background:#0b0b10 }
+  .vizwrap:fullscreen .viz { height:100vh; border-radius:0 }
+  .tip { color:var(--dim); font-size:13px; margin:10px 2px }
+
+  /* tuner */
+  .card { background:var(--card); border-radius:12px; padding:14px }
+  .card h2 { font-size:14px; margin:0 0 8px; display:flex; justify-content:space-between; align-items:center }
   #tuner { display:none; text-align:center }
   .note { font-size:80px; font-weight:700; line-height:1.1; height:88px }
   .hz { color:var(--dim); height:20px }
@@ -30,50 +94,57 @@
   .strings { display:flex; justify-content:center; gap:6px; margin-top:12px }
   .strings div { width:44px; padding:8px 0; border-radius:8px; background:#111; color:var(--dim) }
   .strings div.on { background:var(--acc); color:#000; font-weight:700 }
-  select { background:#111; color:var(--fg); border:1px solid #444; border-radius:6px; padding:4px 8px }
+  #tuner { max-width:520px; margin:0 auto }
+
+  /* scale practice */
+  #scales { display:none }
+  .sctl { display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; margin-bottom:12px }
+  .sctl label { color:var(--dim); font-size:13px; display:flex; align-items:center; gap:6px }
+  .sctl button { border:0; border-radius:6px; background:#333; color:var(--fg); padding:6px 12px; cursor:pointer; font:inherit; font-size:13px }
+  .sheet { overflow-x:auto; background:#16161b; border-radius:10px; padding:6px 0 }
+  .sheet svg { display:block }
+  .sheet .cell { cursor:pointer }
+  .heard { display:flex; flex-wrap:wrap; gap:6px 18px; align-items:baseline; margin-top:12px; min-height:34px }
+  .heard b { font-size:26px; min-width:90px }
+  .heard .ok { color:var(--ok) } .heard .bad { color:#ff6b6b }
 </style>
 <main>
-  <h1>Go Pedal</h1>
-  <div class="tabs">
-    <button id="tab-pedal">Pedal</button>
-    <button id="tab-tuner">Tuner</button>
-  </div>
+  <header>
+    <h1>Go Pedal</h1>
+    <div class="tabs">
+      <button id="tab-pedal">Pedalboard</button>
+      <button id="tab-tuner">Tuner</button>
+      <button id="tab-scales">Scales</button>
+    </div>
+  </header>
 
-  <div class="card"><div class="meter"><div id="level"></div></div></div>
+  <div class="bar">
+    <span class="dot" id="dot"></span>
+    <label for="src">Input</label>
+    <select id="src"></select>
+    <span class="status" id="status"></span>
+    <div class="meter"><div id="level"></div></div>
+  </div>
 
   <div id="pedal">
-    <div class="card">
-      <h2>Output</h2>
-      <label><span>Volume</span><input type="range" data-k="volume" min="0" max="1" step="0.01"><output></output></label>
+    <div class="vizwrap">
+      <canvas class="viz" id="viz"></canvas>
+      <button class="vnav" id="vprev" title="Previous visualizer">‹</button>
+      <button class="vnav r" id="vnext" title="Next visualizer">›</button>
+      <button class="vnav fs" id="vfs" title="Full screen (F)">⛶</button>
+      <div class="vdots" id="vdots"></div>
     </div>
-    <div class="card">
-      <h2>Noise gate <input type="checkbox" data-k="gateOn"></h2>
-      <label><span>Threshold</span><input type="range" data-k="gate" min="0" max="0.1" step="0.001"><output></output></label>
+    <div class="board" id="board"></div>
+    <div class="tray" id="tray">
+      <div class="trayhead"><b>Pedal tray</b><span class="hint">drag pedals onto the board, or back here to take them off</span>
+        <button id="clear">Clear board</button><button id="reset">Reset</button></div>
+      <div class="chips" id="chips"></div>
     </div>
-    <div class="card">
-      <h2>Fuzz <input type="checkbox" data-k="fuzzOn"></h2>
-      <label><span>Fuzz</span><input type="range" data-k="fuzz" min="1" max="100" step="1"><output></output></label>
-      <label><span>Tone</span><input type="range" data-k="fuzzTone" min="0" max="1" step="0.01"><output></output></label>
-    </div>
-    <div class="card">
-      <h2>Overdrive <input type="checkbox" data-k="driveOn"></h2>
-      <label><span>Drive</span><input type="range" data-k="drive" min="1" max="50" step="0.5"><output></output></label>
-    </div>
-    <div class="card">
-      <h2>Delay <input type="checkbox" data-k="delayOn"></h2>
-      <label><span>Time (ms)</span><input type="range" data-k="delayMs" min="20" max="1000" step="10"><output></output></label>
-      <label><span>Feedback</span><input type="range" data-k="feedback" min="0" max="0.9" step="0.01"><output></output></label>
-      <label><span>Mix</span><input type="range" data-k="mix" min="0" max="1" step="0.01"><output></output></label>
-    </div>
-    <div class="card">
-      <h2>Reverb <input type="checkbox" data-k="revOn"></h2>
-      <label><span>Room size</span><input type="range" data-k="room" min="0" max="1" step="0.01"><output></output></label>
-      <label><span>Damping</span><input type="range" data-k="damp" min="0" max="1" step="0.01"><output></output></label>
-      <label><span>Mix</span><input type="range" data-k="revMix" min="0" max="1" step="0.01"><output></output></label>
-    </div>
+    <p class="tip">Drag a knob up/down (or use the mouse wheel) to turn it. Click the footswitch to toggle a pedal. Visualizers: ← → to switch, F for full screen, Esc to exit.
+      Drag the ⠿ handle, or use ◀ ▶, to reorder the signal chain.</p>
   </div>
 
-  <div id="tuner" class="card">
+  <div id="tuner" class="card" style="display:none;text-align:center">
     <h2>Guitar tuner
       <select data-k="tuning">
         <option value="standard">Standard (EADGBE)</option>
@@ -88,6 +159,19 @@
     <div class="strings" id="strings"></div>
     <p style="color:var(--dim);font-size:13px">Output is muted while tuning.</p>
   </div>
+  <div id="scales" class="card">
+    <h2>Scale practice</h2>
+    <div class="sctl">
+      <label>Key <select id="sc-root"></select></label>
+      <label>Scale <select id="sc-type"></select></label>
+      <label>Octaves <select id="sc-oct"><option>1</option><option selected>2</option></select></label>
+      <label>Direction <select id="sc-dir"><option value="up">Up</option><option value="updown">Up and down</option></select></label>
+      <button id="sc-restart">Restart</button>
+    </div>
+    <div class="sheet" id="sheet"></div>
+    <div class="heard"><span class="hint">You're playing</span><b id="sc-heard">–</b><span id="sc-msg" class="hint"></span></div>
+    <p class="tip" id="sc-tip"></p>
+  </div>
 </main>
 <script>
 const $ = s => document.querySelector(s);
@@ -96,6 +180,323 @@ const TUNINGS = {
   standard:['E','A','D','G','B','E'], dropd:['D','A','D','G','B','E'],
   halfstep:['Eb','Ab','Db','Gb','Bb','Eb'],
 };
+
+// Pedal definitions: id matches the server's chain names, keys match Params json tags.
+const PEDALS = {
+  gate:   {name:'Noise Gate', color:'#3c7a5a', on:'gateOn', knobs:[{k:'gate',label:'Thresh',min:0,max:0.1,step:0.001}]},
+  fuzz:   {name:'Fuzz', color:'#a83a8c', on:'fuzzOn', knobs:[{k:'fuzz',label:'Fuzz',min:1,max:100,step:1},{k:'fuzzTone',label:'Tone',min:0,max:1,step:0.01}]},
+  dist:   {name:'Distortion', color:'#c0392b', on:'distOn', knobs:[{k:'dist',label:'Gain',min:1,max:100,step:1},{k:'distTone',label:'Tone',min:0,max:1,step:0.01},{k:'distLevel',label:'Level',min:0,max:1,step:0.01}]},
+  drive:  {name:'Overdrive', color:'#d8891a', on:'driveOn', knobs:[{k:'drive',label:'Drive',min:1,max:50,step:0.5}]},
+  delay:  {name:'Delay', color:'#2f6fb0', on:'delayOn', knobs:[{k:'delayMs',label:'Time',min:20,max:1000,step:10},{k:'feedback',label:'Repeats',min:0,max:0.9,step:0.01},{k:'mix',label:'Mix',min:0,max:1,step:0.01}]},
+  reverb: {name:'Reverb', color:'#5b4fa8', on:'revOn', knobs:[{k:'room',label:'Room',min:0,max:1,step:0.01},{k:'damp',label:'Damp',min:0,max:1,step:0.01},{k:'revMix',label:'Mix',min:0,max:1,step:0.01}]},
+};
+Object.assign(PEDALS, {
+  comp:    {name:'Compressor', color:'#2a8c8c', on:'compOn', knobs:[{k:'compThresh',label:'Thresh',min:-50,max:0,step:1},{k:'compRatio',label:'Ratio',min:1,max:20,step:0.5},{k:'compMakeup',label:'Makeup',min:0,max:24,step:1}]},
+  wah:     {name:'Auto Wah', color:'#8a9a1c', on:'wahOn', knobs:[{k:'wahSens',label:'Sens',min:0,max:1,step:0.01},{k:'wahFreq',label:'Freq',min:0,max:1,step:0.01},{k:'wahQ',label:'Peak',min:0,max:1,step:0.01}]},
+  tremolo: {name:'Tremolo', color:'#b0507a', on:'tremOn', knobs:[{k:'tremRate',label:'Rate',min:0.1,max:15,step:0.1},{k:'tremDepth',label:'Depth',min:0,max:1,step:0.01}]},
+  chorus:  {name:'Chorus', color:'#2d9cdb', on:'chorOn', knobs:[{k:'chorRate',label:'Rate',min:0.05,max:6,step:0.05},{k:'chorDepth',label:'Depth',min:0,max:1,step:0.01},{k:'chorMix',label:'Mix',min:0,max:1,step:0.01}]},
+  flanger: {name:'Flanger', color:'#d05a2a', on:'flaOn', knobs:[{k:'flaRate',label:'Rate',min:0.05,max:5,step:0.05},{k:'flaDepth',label:'Depth',min:0,max:1,step:0.01},{k:'flaFeedback',label:'Feedback',min:0,max:0.9,step:0.01},{k:'flaMix',label:'Mix',min:0,max:1,step:0.01}]},
+  octave:  {name:'Octave', color:'#7a5230', on:'octOn', knobs:[{k:'octDown',label:'Down',min:0,max:1,step:0.01},{k:'octUp',label:'Up',min:0,max:1,step:0.01},{k:'octDry',label:'Dry',min:0,max:1,step:0.01}]},
+  harmony: {name:'Harmony', color:'#4aa36a', on:'harmOn', knobs:[{k:'harmSemi',label:'Interval',min:-12,max:12,step:1},{k:'harmMix',label:'Mix',min:0,max:1,step:0.01}]},
+  ring:    {name:'Robot', color:'#707a8a', on:'ringOn', knobs:[{k:'ringFreq',label:'Freq',min:20,max:2000,step:10},{k:'ringMix',label:'Mix',min:0,max:1,step:0.01}]},
+  freeze:  {name:'Freeze', color:'#4fa9c9', on:'frzOn', knobs:[{k:'frzSize',label:'Size',min:50,max:500,step:10},{k:'frzDry',label:'Dry',min:0,max:1,step:0.01}]},
+  cab:     {name:'Cabinet', color:'#4a4a52', on:'cabOn', knobs:[{k:'cabTone',label:'Tone',min:0,max:1,step:0.01},{k:'cabBody',label:'Body',min:0,max:1,step:0.01}]},
+});
+const MASTER = {name:'Master', knobs:[{k:'volume',label:'Volume',min:0,max:1,step:0.01}]};
+
+// Sound visualizers: swipe, use the arrows or the ← → keys to scroll through them.
+const viz = $('#viz'), vctx = viz.getContext('2d');
+let target = [], bars = [], caps = [], vparts = [];
+let energy = 0, bass = 0, beat = false, vw = 0, vh = 0, vt = 0;
+const hue = (h, l = 58, a = 1) => `hsla(${h % 360}, 90%, ${l}%, ${a})`;
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+const VIZ = [
+  {name:'Rainbow bars', draw(c, w, h) {
+    const n = bars.length, gap = 4, bw = (w - gap * (n + 1)) / n;
+    bars.forEach((v, i) => {
+      const x = gap + i * (bw + gap), bh = Math.max(4, v * (h - 14));
+      c.fillStyle = hue(i / n * 300 + 120 + vt * 16);
+      c.beginPath(); c.roundRect(x, h - bh, bw, bh, Math.min(bw / 2, 8)); c.fill();
+      c.fillStyle = '#fff'; c.fillRect(x, h - caps[i] * (h - 14) - 8, bw, 3);
+    });
+  }},
+  {name:'Mirror', draw(c, w, h) {
+    const n = bars.length, gap = 3, bw = (w - gap * (n * 2 + 1)) / (n * 2);
+    for (let i = 0; i < n; i++) for (const side of [-1, 1]) {
+      const bh = Math.max(3, bars[i] * h * 0.46), x = w / 2 + side * (i * (bw + gap)) + (side < 0 ? -bw - gap : gap);
+      c.fillStyle = hue(i / n * 280 + vt * 30);
+      c.beginPath(); c.roundRect(x, h / 2 - bh, bw, bh * 2, bw / 2); c.fill();
+    }
+  }},
+  {name:'Sunburst', draw(c, w, h) {
+    const n = bars.length, cx = w / 2, cy = h / 2, r0 = Math.min(w, h) * (0.16 + bass * 0.08), len = Math.min(w, h) * 0.34;
+    c.lineCap = 'round'; c.lineWidth = Math.max(3, Math.min(w, h) * 0.022);
+    for (let i = 0; i < n * 2; i++) {
+      const v = bars[i < n ? i : n * 2 - 1 - i], a = i / (n * 2) * Math.PI * 2 + vt * 0.25;
+      c.strokeStyle = hue(i / (n * 2) * 360 + vt * 40);
+      c.beginPath(); c.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+      c.lineTo(cx + Math.cos(a) * (r0 + 4 + v * len), cy + Math.sin(a) * (r0 + 4 + v * len)); c.stroke();
+    }
+    c.fillStyle = hue(vt * 60, 60, 0.9); c.beginPath(); c.arc(cx, cy, r0 * 0.7 * (0.8 + bass * 0.5), 0, 7); c.fill();
+  }},
+  {name:'Bubbles', draw(c, w, h, dt) {
+    bars.forEach((v, i) => { if (v > 0.3 && Math.random() < v * 0.5)
+      vparts.push({x:(i + 0.5) / bars.length * w + rnd(-10, 10), y:h + 10, r:8 + v * 34, vy:rnd(40, 90) + v * 120, hue:i / bars.length * 300 + vt * 30, life:1}); });
+    vparts = vparts.filter(p => p.life > 0 && p.y > -60);
+    for (const p of vparts) {
+      p.y -= p.vy * dt; p.x += Math.sin(p.y / 30 + p.r) * 0.6; p.life -= dt * 0.25;
+      c.fillStyle = hue(p.hue, 60, 0.28 * p.life + 0.1); c.strokeStyle = hue(p.hue, 75, p.life);
+      c.lineWidth = 2; c.beginPath(); c.arc(p.x, p.y, p.r, 0, 7); c.fill(); c.stroke();
+    }
+  }},
+  {name:'Waves', draw(c, w, h) {
+    const n = bars.length;
+    for (let layer = 0; layer < 3; layer++) {
+      c.fillStyle = hue(200 + layer * 70 + vt * 20, 55, 0.55);
+      c.beginPath(); c.moveTo(0, h);
+      for (let i = 0; i <= n; i++) {
+        const v = bars[Math.min(i, n - 1)] * (1 - layer * 0.22), x = i / n * w;
+        const y = h - 8 - v * h * 0.8 - Math.sin(vt * 2 + i * 0.4 + layer * 2) * 8 * (0.3 + energy);
+        i ? c.lineTo(x, y) : c.lineTo(0, y);
+      }
+      c.lineTo(w, h); c.closePath(); c.fill();
+    }
+  }},
+  {name:'Fireworks', draw(c, w, h, dt) {
+    if ((beat || (energy > 0.35 && Math.random() < 0.05)) && vparts.length < 400) {
+      const x = rnd(w * 0.15, w * 0.85), y = rnd(h * 0.15, h * 0.55), hh = rnd(0, 360);
+      for (let i = 0; i < 28; i++) { const a = i / 28 * 6.283, s = rnd(60, 140) * (0.6 + energy);
+        vparts.push({x, y, vx:Math.cos(a) * s, vy:Math.sin(a) * s, hue:hh + rnd(-20, 20), life:1}); }
+    }
+    vparts = vparts.filter(p => p.life > 0);
+    for (const p of vparts) {
+      p.vy += 90 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 0.8;
+      c.fillStyle = hue(p.hue, 62, p.life); c.beginPath(); c.arc(p.x, p.y, 3.5 * p.life + 1, 0, 7); c.fill();
+    }
+  }},
+  {name:'Starfield', draw(c, w, h, dt) {
+    while (vparts.length < 140) vparts.push({a:rnd(0, 6.283), d:rnd(0, 1), hue:rnd(180, 330)});
+    const cx = w / 2, cy = h / 2, R = Math.hypot(cx, cy);
+    for (const p of vparts) {
+      const prev = p.d; p.d += dt * (0.12 + energy * 1.6 + p.d * 0.6);
+      if (p.d > 1) { p.d = rnd(0, 0.05); p.a = rnd(0, 6.283); continue; }
+      c.strokeStyle = hue(p.hue, 75, Math.min(1, p.d * 1.5)); c.lineWidth = 1 + p.d * 3; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(cx + Math.cos(p.a) * prev * R, cy + Math.sin(p.a) * prev * R);
+      c.lineTo(cx + Math.cos(p.a) * p.d * R, cy + Math.sin(p.a) * p.d * R); c.stroke();
+    }
+  }},
+  {name:'Party', draw(c, w, h, dt) {
+    const g = c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.6);
+    g.addColorStop(0, hue(vt * 40 + 280, 35, 0.15 + bass * 0.5)); g.addColorStop(1, 'transparent');
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+    if (beat || Math.random() < energy * 0.4) for (let i = 0; i < 4; i++)
+      vparts.push({x:rnd(0, w), y:h + 5, vx:rnd(-30, 30), vy:rnd(-220, -120), hue:rnd(0, 360), life:1});
+    vparts = vparts.filter(p => p.life > 0);
+    for (const p of vparts) {
+      p.vy += 160 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 0.5;
+      c.fillStyle = hue(p.hue, 60, p.life); c.fillRect(p.x, p.y, 7, 7);
+    }
+    c.save(); c.translate(w / 2, h / 2); c.rotate(Math.sin(vt * 6) * 0.12 * (0.3 + energy));
+    c.font = `${Math.min(w, h) * (0.4 + energy * 0.6)}px serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('🎸', 0, 0); c.restore();
+  }},
+];
+
+let vizIdx = 0;
+try { vizIdx = (+localStorage.getItem('viz') || 0) % VIZ.length; } catch (e) {}
+let vizLabel = 0;
+function setViz(i) {
+  vizIdx = (i + VIZ.length) % VIZ.length; vparts = []; vizLabel = 1.5;
+  try { localStorage.setItem('viz', vizIdx); } catch (e) {}
+  document.querySelectorAll('#vdots i').forEach((d, j) => d.classList.toggle('on', j === vizIdx));
+}
+$('#vdots').innerHTML = VIZ.map((v, i) => `<i title="${v.name}" onclick="setViz(${i})"></i>`).join('');
+$('#vprev').onclick = () => setViz(vizIdx - 1);
+$('#vnext').onclick = () => setViz(vizIdx + 1);
+// full screen: F toggles, Esc exits (the browser handles Esc itself)
+const wrap = viz.parentElement;
+function toggleFull() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else wrap.requestFullscreen?.().catch(() => {});
+}
+$('#vfs').onclick = toggleFull;
+viz.ondblclick = toggleFull;
+let swipeX = null;
+viz.onpointerdown = e => { swipeX = e.clientX; };
+viz.onpointerup = e => { if (swipeX != null && Math.abs(e.clientX - swipeX) > 40) setViz(vizIdx + (e.clientX < swipeX ? 1 : -1)); swipeX = null; };
+addEventListener('keydown', e => {
+  if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) || document.activeElement.classList.contains('knob')) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === 'ArrowLeft') setViz(vizIdx - 1); else if (e.key === 'ArrowRight') setViz(vizIdx + 1);
+  else if (e.key === 'f' || e.key === 'F') toggleFull();
+});
+
+let lastFrame = performance.now();
+function drawViz(now) {
+  const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now; vt += dt;
+  const dpr = devicePixelRatio || 1;
+  vw = viz.clientWidth; vh = viz.clientHeight;
+  if (viz.width !== vw * dpr || viz.height !== vh * dpr) { viz.width = vw * dpr; viz.height = vh * dpr; }
+  vctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  vctx.clearRect(0, 0, vw, vh);
+  const n = target.length || 32;
+  for (let i = 0; i < n; i++) {
+    const t = target[i] || 0;
+    bars[i] = t > (bars[i] || 0) ? t : (bars[i] || 0) * 0.88 + t * 0.12; // quick rise, soft fall
+    caps[i] = Math.max(bars[i], (caps[i] || 0) - 0.012);
+  }
+  const prevBass = bass;
+  energy = bars.reduce((a, b) => a + b, 0) / n; bass = bars.slice(0, 6).reduce((a, b) => a + b, 0) / 6;
+  beat = bass > prevBass + 0.04 && bass > 0.25;
+  vctx.save(); VIZ[vizIdx].draw(vctx, vw, vh, dt); vctx.restore();
+  if (vizLabel > 0) {
+    vizLabel -= dt; vctx.globalAlpha = Math.min(1, vizLabel); vctx.fillStyle = '#fff'; vctx.font = '600 14px system-ui';
+    vctx.textAlign = 'center'; vctx.fillText(VIZ[vizIdx].name, vw / 2, 22); vctx.globalAlpha = 1;
+  }
+  requestAnimationFrame(drawViz);
+}
+setViz(vizIdx); vizLabel = 0;
+requestAnimationFrame(drawViz);
+
+let P = null;            // last params from the server
+let order = [];
+const decimals = k => (String(k.step).split('.')[1] || '').length;
+const angle = (k, v) => -135 + 270 * (v - k.min) / (k.max - k.min);
+
+function knobEl(k) {
+  const box = document.createElement('div');
+  box.className = 'knobbox';
+  box.innerHTML = `<div class="knob" tabindex="0" role="slider"></div>${k.label}<output></output>`;
+  const knob = box.firstChild, out = box.querySelector('output');
+  const show = v => {
+    knob.style.setProperty('--r', angle(k, v) + 'deg');
+    out.textContent = (+v).toFixed(decimals(k));
+    knob.setAttribute('aria-valuenow', v);
+  };
+  knob.dataset.k = k.k;
+  knob.show = show;
+  show(P[k.k]);
+  const set = v => {
+    v = Math.round(Math.max(k.min, Math.min(k.max, v)) / k.step) * k.step;
+    if (v === P[k.k]) return;
+    P[k.k] = v; show(v); post({[k.k]: v});
+  };
+  let y0, v0;
+  knob.onpointerdown = e => { knob.setPointerCapture(e.pointerId); y0 = e.clientY; v0 = P[k.k]; e.preventDefault(); };
+  knob.onpointermove = e => { if (y0 != null) set(v0 + (y0 - e.clientY) / 150 * (k.max - k.min)); };
+  knob.onpointerup = knob.onpointercancel = () => { y0 = null; };
+  knob.ondblclick = () => set(k.def ?? DEFAULTS[k.k]);
+  knob.onwheel = e => { e.preventDefault(); set(P[k.k] - Math.sign(e.deltaY) * (k.max - k.min) / 50); };
+  knob.onkeydown = e => {
+    const d = {ArrowUp:1, ArrowRight:1, ArrowDown:-1, ArrowLeft:-1}[e.key];
+    if (d) { e.preventDefault(); set(P[k.k] + d * (k.max - k.min) / 50); }
+  };
+  return box;
+}
+const DEFAULTS = {tremRate:5, tremDepth:0.6, chorRate:0.8, chorDepth:0.5, chorMix:0.5, wahSens:0.7, wahFreq:0.4, wahQ:0.5,
+  octDown:0.7, octUp:0.3, octDry:1, cabTone:0.5, cabBody:0.4, compThresh:-20, compRatio:4, compMakeup:6,
+  flaRate:0.3, flaDepth:0.7, flaFeedback:0.5, flaMix:0.5, harmSemi:7, harmMix:0.5, ringFreq:300, ringMix:0.6, frzSize:150, frzDry:0.5,
+  gate:0.01, fuzz:30, fuzzTone:0.5, dist:20, distTone:0.5, distLevel:0.5, drive:8, delayMs:300, feedback:0.35, mix:0.4,
+  room:0.6, damp:0.5, revMix:0.3, volume:0.5};
+
+// Organisation: the board holds the pedals in the signal chain; the tray holds the rest.
+// Drag a pedal by its ⠿ handle (or a tray chip) onto the board / another pedal / the tray.
+let dragId = null;
+function setOrder(o) { order = o; post({order}); buildBoard(); }
+function place(id, beforeId, after) {
+  const o = order.filter(x => x !== id);
+  let at = beforeId ? o.indexOf(beforeId) + (after ? 1 : 0) : o.length;
+  o.splice(at, 0, id); setOrder(o);
+}
+function step(id, d) {
+  const i = order.indexOf(id), to = i + d;
+  if (to < 0 || to >= order.length) return;
+  const o = order.slice(); o.splice(i, 1); o.splice(to, 0, id); setOrder(o);
+}
+const clearDrag = () => { dragId = null; document.querySelectorAll('.dragging,.over-l,.over-r,.over').forEach(e => e.classList.remove('dragging', 'over-l', 'over-r', 'over')); };
+function startDrag(e, id, el) {
+  dragId = id; e.dataTransfer.setData('text/plain', id); e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setDragImage(el, 40, 20); setTimeout(() => el.classList.add('dragging'), 0);
+}
+
+function pedalEl(id, i) {
+  const d = PEDALS[id];
+  const el = document.createElement('div');
+  el.className = 'pedal' + (!d.on || P[d.on] ? '' : ' off');
+  el.style.setProperty('--c', d.color);
+  el.dataset.id = id;
+  el.innerHTML = `<button class="rm" title="Move to the tray">✕</button><div class="top"><span class="grip" draggable="true" title="Drag to reorder, or onto the tray to remove">⠿</span>
+      <button class="mv" title="Move earlier">◀</button><span class="name">${d.name}</span><button class="mv" title="Move later">▶</button></div>
+    <div class="knobs"></div><div class="foot" role="switch" title="Toggle"><span class="led"></span></div>`;
+  d.knobs.forEach(k => el.querySelector('.knobs').append(knobEl(k)));
+  const [prev, next] = el.querySelectorAll('.mv');
+  prev.disabled = i === 0; next.disabled = i === order.length - 1;
+  prev.onclick = () => step(id, -1); next.onclick = () => step(id, 1);
+  el.querySelector('.rm').onclick = () => setOrder(order.filter(x => x !== id));
+  el.querySelector('.foot').onclick = () => {
+    P[d.on] = !P[d.on]; el.classList.toggle('off', !P[d.on]); post({[d.on]: P[d.on]});
+  };
+  const grip = el.querySelector('.grip');
+  grip.ondragstart = e => startDrag(e, id, el);
+  grip.ondragend = clearDrag;
+  el.ondragover = e => {
+    if (!dragId || dragId === id) return;
+    e.preventDefault(); e.stopPropagation();
+    const r = el.getBoundingClientRect(), after = e.clientX > r.left + r.width / 2;
+    el.classList.toggle('over-r', after); el.classList.toggle('over-l', !after);
+  };
+  el.ondragleave = () => el.classList.remove('over-l', 'over-r');
+  el.ondrop = e => {
+    e.preventDefault(); e.stopPropagation();
+    const r = el.getBoundingClientRect(), after = e.clientX > r.left + r.width / 2;
+    if (dragId && dragId !== id) place(dragId, id, after);
+    clearDrag();
+  };
+  return el;
+}
+
+function buildBoard() {
+  const b = $('#board');
+  b.innerHTML = '';
+  const jack = t => { const j = document.createElement('div'); j.className = 'jack'; j.innerHTML = `<i></i>${t}`; return j; };
+  const cable = () => Object.assign(document.createElement('div'), {className:'cable'});
+  b.append(jack('Guitar'));
+  order.forEach((id, i) => { b.append(cable(), pedalEl(id, i)); });
+  if (!order.length) b.append(Object.assign(document.createElement('div'), {className:'empty', textContent:'Drag pedals here from the tray'}));
+  const m = document.createElement('div');
+  m.className = 'pedal master';
+  m.innerHTML = `<div class="top"><span class="name">${MASTER.name}</span></div><div class="knobs"></div>`;
+  MASTER.knobs.forEach(k => m.querySelector('.knobs').append(knobEl(k)));
+  b.append(cable(), m, cable(), jack('Amp'));
+  buildTray();
+}
+
+function buildTray() {
+  const t = $('#chips');
+  t.innerHTML = '';
+  const rest = Object.keys(PEDALS).filter(id => !order.includes(id));
+  rest.forEach(id => {
+    const d = PEDALS[id], c = document.createElement('div');
+    c.className = 'chip'; c.draggable = true; c.style.setProperty('--c', d.color);
+    c.innerHTML = `<span>${d.name}</span><button title="Add to the end of the board">+</button>`;
+    c.ondragstart = e => startDrag(e, id, c);
+    c.ondragend = clearDrag;
+    c.querySelector('button').onclick = () => place(id);
+    t.append(c);
+  });
+  if (!rest.length) t.append(Object.assign(document.createElement('span'), {className:'hint', textContent:'Every pedal is on the board.'}));
+}
+
+// the board accepts drops anywhere (adds to the end); the tray takes pedals off the board
+const board = $('#board'), tray = $('#tray');
+board.ondragover = e => { if (dragId) e.preventDefault(); };
+board.ondrop = e => { e.preventDefault(); if (dragId) place(dragId); clearDrag(); };
+tray.ondragover = e => { if (dragId) { e.preventDefault(); tray.classList.add('over'); } };
+tray.ondragleave = () => tray.classList.remove('over');
+tray.ondrop = e => { e.preventDefault(); if (dragId) setOrder(order.filter(x => x !== dragId)); tray.classList.remove('over'); clearDrag(); };
+$('#clear').onclick = () => setOrder([]);
+$('#reset').onclick = () => setOrder(['gate','fuzz','dist','drive','delay','reverb']);
 
 // gauge ticks
 for (let c = -50; c <= 50; c += 10) {
@@ -108,38 +509,59 @@ for (let c = -50; c <= 50; c += 10) {
 function setMode(mode) {
   $('#tab-pedal').classList.toggle('on', mode === 'pedal');
   $('#tab-tuner').classList.toggle('on', mode === 'tuner');
+  $('#tab-scales').classList.toggle('on', mode === 'scales');
   $('#pedal').style.display = mode === 'pedal' ? '' : 'none';
   $('#tuner').style.display = mode === 'tuner' ? 'block' : 'none';
+  $('#scales').style.display = mode === 'scales' ? 'block' : 'none';
+  scalesOn = mode === 'scales';
 }
+let scalesOn = false;
 $('#tab-pedal').onclick = () => { setMode('pedal'); post({mode:'pedal'}); };
 $('#tab-tuner').onclick = () => { setMode('tuner'); post({mode:'tuner'}); };
+// The scales tab keeps the server in pedal mode so you hear your effects while practising.
+$('#tab-scales').onclick = () => { setMode('scales'); post({mode:'pedal'}); };
 
-function fmt(el, v) {
-  const o = el.parentElement.querySelector('output');
-  if (o) o.textContent = (+v).toFixed(el.step.includes('.') ? (el.step.split('.')[1].length) : 0);
-}
-
-document.querySelectorAll('[data-k]').forEach(el => {
-  el.addEventListener('input', () => {
-    const v = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value;
-    if (el.type === 'range') fmt(el, v);
-    post({[el.dataset.k]: v});
-    if (el.dataset.k === 'tuning') drawStrings(v);
-  });
+document.querySelectorAll('select[data-k]').forEach(el => {
+  el.addEventListener('input', () => { post({[el.dataset.k]: el.value}); drawStrings(el.value); buildScale(); });
 });
 
 function drawStrings(tuning) {
   $('#strings').innerHTML = TUNINGS[tuning].map((n,i) => `<div data-s="${i+1}">${n}</div>`).join('');
 }
 
-function loadParams(p) {
-  document.querySelectorAll('[data-k]').forEach(el => {
-    const v = p[el.dataset.k];
-    if (el.type === 'checkbox') el.checked = v; else el.value = v;
-    if (el.type === 'range') fmt(el, v);
-  });
-  setMode(p.mode);
-  drawStrings(p.tuning);
+// input device selector
+let sources = [], want = '', active = '';
+let srcSig = '';
+function renderSources() {
+  const sel = $('#src');
+  if (document.activeElement === sel) return; // don't yank the dropdown while it is open
+  const sig = JSON.stringify([sources, want]);
+  if (sig === srcSig) return;
+  srcSig = sig;
+  const opts = [['', 'Auto-detect guitar']].concat(sources.map(s => [s.name, s.description + (s.guitar ? ' 🎸' : '')]));
+  if (want && !sources.some(s => s.name === want)) opts.push([want, want + ' (unplugged)']);
+  sel.innerHTML = opts.map(([v, t]) => `<option value="${v}">${t.replace(/</g, '&lt;')}</option>`).join('');
+  sel.value = want;
+}
+async function loadSources() {
+  try { sources = await (await fetch('/api/sources')).json(); renderSources(); } catch (e) {}
+}
+$('#src').onchange = async () => {
+  want = $('#src').value;
+  sources = await (await fetch('/api/sources', {method:'POST', body:JSON.stringify({name:want})})).json();
+  renderSources();
+};
+$('#src').onfocus = loadSources; // refresh the list right as you open it
+setInterval(loadSources, 3000);
+loadSources();
+
+function showSource(s) {
+  want = s.want; active = s.active;
+  $('#dot').classList.toggle('on', !!active);
+  const cur = sources.find(x => x.name === active);
+  $('#status').textContent = active ? 'Connected: ' + (cur ? cur.description : active)
+    : want ? 'Waiting for the selected device to be plugged in…' : 'No guitar found. Plug it in or pick a device.';
+  renderSources();
 }
 
 function showTuner(t) {
@@ -160,12 +582,157 @@ function showTuner(t) {
   $('#cents').style.color = inTune ? 'var(--ok)' : 'var(--fg)';
 }
 
+
+// ---- scale practice ----
+// Notes are drawn in treble clef (guitar music is written an octave above it sounds),
+// with the tab on the same x positions underneath. The detected pitch comes from the tuner.
+const OPEN_MIDI = {standard:[40,45,50,55,59,64], dropd:[38,45,50,55,59,64], halfstep:[39,44,49,54,58,63]};
+const MAX_MIDI = 71; // pitch detection tops out around 500 Hz (B4)
+const LETTERS = 'CDEFGAB', NAT_PC = [0,2,4,5,7,9,11];
+const SHARP_NAMES = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const SC_ROOTS = ['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+// [scale degree, semitones above the root]
+const SCALES = {
+  major:   {name:'Major',            steps:[[1,0],[2,2],[3,4],[4,5],[5,7],[6,9],[7,11]]},
+  minor:   {name:'Natural minor',    steps:[[1,0],[2,2],[3,3],[4,5],[5,7],[6,8],[7,10]]},
+  majpent: {name:'Major pentatonic', steps:[[1,0],[2,2],[3,4],[5,7],[6,9]]},
+  minpent: {name:'Minor pentatonic', steps:[[1,0],[3,3],[4,5],[5,7],[7,10]]},
+  blues:   {name:'Blues',            steps:[[1,0],[3,3],[4,5],[5,6],[5,7],[7,10]]},
+};
+const SC = {notes:[], idx:0, hold:0, timer:0};
+function restartScale() { clearTimeout(SC.timer); SC.idx = 0; SC.hold = 0; drawSheet(); }
+
+// Pick a string/fret for each note, minimising hand movement (dynamic programming).
+function assignTab(notes, open) {
+  const cands = notes.map(n => open.map((o, s) => ({string:s, fret:n.midi - o})).filter(c => c.fret >= 0 && c.fret <= 12));
+  const move = (a, b) => (a.fret && b.fret ? Math.abs(a.fret - b.fret) : 0.5) + 0.3 * Math.abs(a.string - b.string);
+  let cost = cands[0].map(c => ({c, total:0.15 * c.fret, from:null}));
+  const rows = [cost];
+  for (let i = 1; i < cands.length; i++) {
+    cost = cands[i].map(c => {
+      let best = null;
+      for (const p of rows[i-1]) {
+        const t = p.total + move(p.c, c);
+        if (!best || t < best.total) best = {c, total:t + 0.15 * c.fret, from:p};
+      }
+      return best;
+    });
+    rows.push(cost);
+  }
+  let node = rows[rows.length-1].reduce((a, b) => a.total <= b.total ? a : b);
+  for (let i = notes.length - 1; i >= 0; i--, node = node.from) Object.assign(notes[i], node.c);
+}
+
+function buildScale() {
+  const tuning = (P && P.tuning) || 'standard';
+  const open = OPEN_MIDI[tuning];
+  const m = /^([A-G])([#b]?)$/.exec($('#sc-root').value);
+  const rl = LETTERS.indexOf(m[1]);
+  const rootPc = (NAT_PC[rl] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) + 12) % 12;
+  let rootMidi = open[0];
+  while (rootMidi % 12 !== rootPc) rootMidi++;
+
+  const octs = +$('#sc-oct').value;
+  const mk = (deg, semis) => {
+    const li = (rl + deg - 1) % 7, midi = rootMidi + semis;
+    const acc = ((midi % 12 - NAT_PC[li] + 18) % 12) - 6;
+    const oct = Math.floor((midi - acc) / 12) - 1;
+    return {midi, li, acc, d:li + 7 * (oct + 1)}; // d: diatonic step of the written (octave-up) pitch
+  };
+  let notes = [];
+  for (let o = 0; o < octs; o++) for (const [deg, semis] of SCALES[$('#sc-type').value].steps) notes.push(mk(deg, semis + 12 * o));
+  notes.push(mk(1, 12 * octs));
+  notes = notes.filter(n => n.midi <= MAX_MIDI);
+  if ($('#sc-dir').value === 'updown') notes = notes.concat(notes.slice(0, -1).reverse().map(n => ({...n})));
+  assignTab(notes, open);
+  SC.notes = notes;
+  clearTimeout(SC.timer); SC.idx = 0; SC.hold = 0;
+  $('#sc-tip').textContent = 'Tab uses the ' + {standard:'standard', dropd:'Drop D', halfstep:'half-step-down'}[tuning] +
+    ' tuning (set it on the Tuner tab). Notes above B4 are left out because the pitch detector stops there. Your effects stay on while you practise.';
+  drawSheet();
+}
+
+function drawSheet() {
+  const X0 = 78, W = 40, YB = 105, TY = 190, TG = 12, notes = SC.notes;
+  const w = X0 + notes.length * W + 10, H = TY + 5 * TG + 24;
+  const sy = step => YB - step * 5;
+  let g = '';
+  for (let i = 0; i < 5; i++) g += `<line x1="8" x2="${w-8}" y1="${sy(i*2)}" y2="${sy(i*2)}" stroke="#888"/>`;
+  for (let s = 0; s < 6; s++) g += `<line x1="8" x2="${w-8}" y1="${TY+s*TG}" y2="${TY+s*TG}" stroke="#888"/>`;
+  g += `<line x1="8" x2="8" y1="${sy(8)}" y2="${sy(0)}" stroke="#888"/><line x1="8" x2="8" y1="${TY}" y2="${TY+5*TG}" stroke="#888"/>`;
+  g += `<text x="14" y="${sy(1.2)}" font-size="62" fill="#ddd" font-family="'Noto Music','Bravura',FreeSerif,serif">\u{1D11E}</text>`;
+  g += `<text x="30" y="${TY+1.5*TG}" font-size="20" font-weight="700" fill="#ddd" text-anchor="middle">T</text>` +
+       `<text x="30" y="${TY+3*TG}" font-size="20" font-weight="700" fill="#ddd" text-anchor="middle">A</text>` +
+       `<text x="30" y="${TY+4.5*TG}" font-size="20" font-weight="700" fill="#ddd" text-anchor="middle">B</text>`;
+  notes.forEach((n, i) => {
+    const x = X0 + i * W + W / 2, step = n.d - 30; // 0 = bottom staff line (E4)
+    const cur = i === SC.idx, done = i < SC.idx;
+    const col = done ? '#3ddc84' : cur ? '#ff8a00' : '#eee';
+    g += `<g class="cell" data-i="${i}">`;
+    g += `<rect x="${x-W/2}" y="0" width="${W}" height="${H}" fill="${cur ? '#ff8a0022' : 'transparent'}"/>`;
+    for (let l = -2; l >= step; l -= 2) g += `<line x1="${x-12}" x2="${x+12}" y1="${sy(l)}" y2="${sy(l)}" stroke="#aaa"/>`;
+    for (let l = 10; l <= step; l += 2) g += `<line x1="${x-12}" x2="${x+12}" y1="${sy(l)}" y2="${sy(l)}" stroke="#aaa"/>`;
+    const up = step < 4, y = sy(step);
+    g += `<line x1="${up ? x+6.5 : x-6.5}" x2="${up ? x+6.5 : x-6.5}" y1="${y}" y2="${up ? y-32 : y+32}" stroke="${col}" stroke-width="1.6"/>`;
+    g += `<ellipse cx="${x}" cy="${y}" rx="7" ry="5" fill="${col}" transform="rotate(-20 ${x} ${y})"/>`;
+    if (n.acc) g += `<text x="${x-12}" y="${y+5}" font-size="18" fill="${col}" text-anchor="end">${n.acc > 0 ? '♯'.repeat(n.acc) : '♭'.repeat(-n.acc)}</text>`;
+    const ty = TY + (5 - n.string) * TG;
+    g += `<rect x="${x-8}" y="${ty-7}" width="16" height="14" fill="#16161b"/>` +
+         `<text x="${x}" y="${ty+5}" font-size="14" font-weight="700" fill="${col}" text-anchor="middle">${n.fret}</text>`;
+    g += `</g>`;
+  });
+  $('#sheet').innerHTML = `<svg width="${w}" height="${H}" viewBox="0 0 ${w} ${H}">${g}</svg>`;
+  const cell = $('#sheet .cell[data-i="' + Math.min(SC.idx, notes.length - 1) + '"]');
+  if (cell) {
+    const box = $('#sheet'), x = X0 + SC.idx * W;
+    if (x < box.scrollLeft + 60 || x > box.scrollLeft + box.clientWidth - 80) box.scrollLeft = Math.max(0, x - box.clientWidth / 3);
+  }
+}
+
+function showScales(t) {
+  const heard = $('#sc-heard'), msg = $('#sc-msg');
+  const n = SC.notes[SC.idx];
+  if (!n) { heard.textContent = '–'; msg.textContent = 'Scale complete! Restarting in 5 seconds…'; return; }
+  if (!t.active) {
+    SC.hold = 0; heard.textContent = '–'; heard.className = '';
+    msg.textContent = `Play ${SHARP_NAMES[n.midi % 12]}${Math.floor(n.midi / 12) - 1}: string ${n.string + 1}, fret ${n.fret}`;
+    return;
+  }
+  const exact = 69 + 12 * Math.log2(t.freq / 440), midi = Math.round(exact), cents = Math.round((exact - midi) * 100);
+  const name = SHARP_NAMES[midi % 12] + (Math.floor(midi / 12) - 1);
+  const ok = midi === n.midi;
+  heard.textContent = name; heard.className = ok ? 'ok' : 'bad';
+  msg.textContent = (ok ? '✓ ' : '') + (cents > 0 ? '+' : '') + cents + '¢';
+  SC.hold = ok ? SC.hold + 1 : 0;
+  if (SC.hold >= 3) {
+    SC.idx++; SC.hold = 0; drawSheet();
+    if (SC.idx >= SC.notes.length) SC.timer = setTimeout(restartScale, 5000);
+  }
+}
+
+$('#sc-root').innerHTML = SC_ROOTS.map(r => `<option>${r}</option>`).join('');
+$('#sc-type').innerHTML = Object.entries(SCALES).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
+['#sc-root', '#sc-type', '#sc-oct', '#sc-dir'].forEach(id => $(id).onchange = buildScale);
+$('#sc-restart').onclick = restartScale;
+$('#sheet').onclick = e => {
+  const c = e.target.closest('.cell');
+  if (c) { clearTimeout(SC.timer); SC.idx = +c.dataset.i; SC.hold = 0; drawSheet(); }
+};
+buildScale();
+
 async function poll(first) {
   try {
     const s = await (await fetch('/api/state')).json();
-    if (first) loadParams(s.params);
+    if (first) {
+      P = s.params; order = P.order.slice();
+      buildBoard(); setMode(P.mode);
+      document.querySelector('select[data-k=tuning]').value = P.tuning; drawStrings(P.tuning); buildScale();
+    }
     $('#level').style.width = Math.min(100, s.level * 150) + '%';
+        target = s.spectrum || [];
+    showSource(s.source);
     showTuner(s.tuner);
+    if (scalesOn) showScales(s.tuner);
   } catch (e) {}
   setTimeout(() => poll(false), 66);
 }

@@ -9,9 +9,11 @@ Plug a guitar into a USB audio interface, run it, and tweak the sound from your 
 
 ## Features
 
-- **Effect chain:** noise gate → fuzz → overdrive → delay → reverb
+- **Pedalboard:** 16 pedals with dials and footswitches: noise gate, fuzz, distortion, overdrive, delay, reverb, compressor, auto wah, tremolo, chorus, flanger, octave, harmony, robot (ring mod), freeze and cabinet sim. Drag pedals between the board and the tray (or use ◀ ▶) to build and order your signal chain.
+- **Visualizers:** 8 scrollable visualizers (← →), full screen with F
 - **Guitar tuner:** pitch detection (YIN) that snaps to the nearest string, with Standard, Drop D and Half-step-down tunings. Output is muted while tuning.
-- **Web UI:** knobs and switches for everything, with a live input level meter
+- **Scale practice:** pick a key and scale (major, minor, pentatonics, blues); it shows the notes in standard notation with guitar tab underneath, listens to what you play and advances as you hit each note. Your effects stay on. Only notes up to B4 are used, because that is where the pitch detector stops.
+- **Input selector:** pick the capture device in the UI; the guitar is auto-detected and reconnects when you replug it
 - **No cgo, no dependencies:** just the Go standard library
 
 ## Requirements
@@ -35,7 +37,7 @@ Find your device names with `pactl list short sources` and `pactl list short sin
 ./pedal -in <source-name> -out <sink-name> -addr 127.0.0.1:8765
 ```
 
-The default input is the Rocksmith adapter. Use headphones, or keep the volume low, to avoid feedback.
+By default the guitar interface is auto-detected (or pick a device in the UI). Use headphones, or keep the volume low, to avoid feedback.
 
 ## How it works
 
@@ -44,15 +46,17 @@ Expect roughly 20-40 ms of round-trip latency. Getting this lower (JACK/PipeWire
 
 | File | What it does |
 | --- | --- |
-| `main.go` | Audio loop, parameters, gate / fuzz / overdrive / delay |
+| `main.go` | Audio loop, parameters, gate / fuzz / distortion / overdrive / delay |
+| `effects.go` | Tremolo, chorus, wah, octave, cabinet, compressor, flanger, harmony, ring mod, freeze |
+| `spectrum.go`, `audio.go` | Visualizer spectrum, capture device detection |
 | `reverb.go` | Freeverb-style reverb |
 | `tuner.go` | YIN pitch detection and guitar tunings |
-| `server.go`, `index.html` | Web server and UI |
+| `server.go`, `index.html` | Web server and UI (including the scale-practice notation and tab, which run in the browser) |
 
 ## Ideas / TODO
 
 - Lower latency audio backend
-- More effects (chorus, tremolo, wah, cabinet simulation)
+- More effects (phaser, reverse)
 - Presets
 - Better tuner smoothing
 
